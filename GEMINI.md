@@ -412,5 +412,20 @@ Esta sección documenta las funcionalidades implementadas y las decisiones técn
         *   **Feedback Visual Claro:** El uso de colores en la tabla principal y la aparición/desaparición contextual del botón de confirmación proporcionan una guía visual intuitiva para el usuario.
         *   **Inmutabilidad Post-Confirmación:** Deshabilitar los controles de asignación después de la confirmación asegura la integridad de los datos y previene cambios accidentales en una etapa posterior del flujo de trabajo.
 
+### 10. **Visualización de Pagos Pendientes con Lógica de Negocio (HU-10)**
+*   **Funcionalidad:** Se ha implementado la página de `Pagos Pendientes` (`/dashboard/pagos`), que constituye el primer paso del módulo de liquidación de deudas con el personal.
+    *   La página muestra una lista de todo el personal que tiene servicios pendientes de pago, agrupados individualmente.
+    *   Solo se consideran los servicios pertenecientes a contratos que ya han sido marcados como `COMPLETADO`.
+    *   Se implementaron reglas de negocio clave para el cálculo de los montos a pagar:
+        *   **Ausencia:** Si un participante fue marcado como `AUSENTE` en un evento, el monto a pagar por sus servicios en ese evento es automáticamente `0`.
+        *   **Tardanza:** Si un participante fue marcado con `TARDANZA`, la UI muestra un campo de entrada que permite al administrador aplicar un descuento en porcentaje. El total a pagar se actualiza dinámicamente.
+        *   **Puntual:** Se muestra el monto completo acordado.
+    *   Se añadió un enlace directo desde cada servicio listado a su respectiva página de detalle de contrato para facilitar la consulta y verificación.
+*   **Decisiones de Implementación:**
+    *   **Patrón de Componente de Cliente:** La página se construyó como un componente de cliente (`'use client'`), siguiendo el patrón establecido en el resto de la aplicación para garantizar la coherencia y evitar conflictos de renderizado.
+    *   **Consulta de BD Específica:** La consulta a Supabase se optimizó para traer solo los datos necesarios, filtrando por `contrato.estado = 'COMPLETADO'` e incluyendo el `estado_asistencia` del participante, que es crucial para la lógica de negocio.
+    *   **Manejo de Estado en la UI:** Se utilizó el estado de React (`useState`) para gestionar los descuentos introducidos por el usuario, permitiendo que los cálculos del total a pagar por persona se realicen y reflejen en la interfaz en tiempo real sin necesidad de recargar la página.
+    *   **Usabilidad Mejorada:** Se reemplazaron los simples IDs de contrato por enlaces directos y se añadieron indicadores visuales (colores y texto) para el estado de asistencia, mejorando la claridad y la experiencia del administrador.
+
 
 
