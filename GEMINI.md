@@ -41,7 +41,7 @@ Las inserciones (`INSERT`) en **TODAS** las tablas de esta sección incrementan 
 | `supabase_user_id`| `UUID` | FK, `UNIQUE`, `NULL` | Almacena el ID de `auth.users` de Supabase. Es la llave que convierte un registro de personal en un usuario con acceso. | Debe ser un formato UUID válido o `NULL`. | 🛡️ **Vínculo de seguridad crítico.** Implementar como `FOREIGN KEY` a `auth.users(id)`. Debe ser `NULLABLE` y tener un constraint `UNIQUE` para valores no nulos. |
 | `id_organizacion` | `INTEGER` | FK (`Organizaciones.id`) | Campo no nulo que asegura que todo miembro del personal pertenezca a una y solo una organización. | Debe ser un ID de organización existente y válido. | **Pilar del multi-tenancy.** 📈 **Contabilizado.** Cada `INSERT` incrementa el contador de uso. |
 | `nombre` | `VARCHAR` | `NOT NULL` | Nombre completo del miembro del personal. Se utiliza para visualización en reportes, listas y asignaciones. | La longitud debe ser mayor a 2 caracteres. No puede contener solo espacios en blanco. | - |
-| `email` | `VARCHAR` | `UNIQUE`, `NULL` | Correo electrónico del miembro del personal. Es el identificador principal para el inicio de sesión en Supabase. | Si no es `NULL`, debe tener un formato de email válido (ej. `usuario@dominio.com`). | Debe ser `NULLABLE`. El constraint `UNIQUE` en PostgreSQL se aplicará solo a los valores que no sean nulos, lo cual es el comportamiento deseado. |
+| `email` | `VARCHAR` | `UNIQUE`, `NULL` | Correo electrónico del miembro del personal. Es el identificador principal para el inicio de sesión en Supabase. | Si no es `NULL`, debe tener un formato de email válido (ej. `usuario<!-- Import failed: dominio.com`). - Only .md files are supported --> | Debe ser `NULLABLE`. El constraint `UNIQUE` en PostgreSQL se aplicará solo a los valores que no sean nulos, lo cual es el comportamiento deseado. |
 | `rol` | `VARCHAR` | `ENUM` | Etiqueta que define el nivel de permisos del usuario (`Administrativo`) o la función laboral del empleado (`Operativo`). | El valor debe pertenecer a una lista predefinida (`ADMINISTRATIVO`, `OPERATIVO`). | Es recomendable usar un tipo `ENUM` de PostgreSQL para restringir los valores a un conjunto predefinido y evitar inconsistencias. |
 | `es_activo` | `BOOLEAN` | `NOT NULL` | Indicador booleano que permite la desactivación (soft-delete) de un empleado sin borrar su registro. | El valor debe ser `TRUE` o `FALSE`. | Las consultas operativas siempre deben incluir la cláusula `WHERE es_activo = TRUE` para mostrar solo al personal relevante. |
 
@@ -426,6 +426,25 @@ Esta sección documenta las funcionalidades implementadas y las decisiones técn
     *   **Consulta de BD Específica:** La consulta a Supabase se optimizó para traer solo los datos necesarios, filtrando por `contrato.estado = 'COMPLETADO'` e incluyendo el `estado_asistencia` del participante, que es crucial para la lógica de negocio.
     *   **Manejo de Estado en la UI:** Se utilizó el estado de React (`useState`) para gestionar los descuentos introducidos por el usuario, permitiendo que los cálculos del total a pagar por persona se realicen y reflejen en la interfaz en tiempo real sin necesidad de recargar la página.
     *   **Usabilidad Mejorada:** Se reemplazaron los simples IDs de contrato por enlaces directos y se añadieron indicadores visuales (colores y texto) para el estado de asistencia, mejorando la claridad y la experiencia del administrador. Se incorporaron columnas adicionales como "Tipo de Contrato" y "Fecha Contrato" (con hora) para dar más contexto, y se corrigió la moneda a Soles (S/) en toda la vista.
+
+### 11. **Creación y Liquidación de Lotes de Pago (HU-11)**
+*   **Funcionalidad:** Se ha implementado el flujo completo para la liquidación de pagos en la página `/dashboard/pagos`.
+    *   Los administradores ahora pueden seleccionar servicios específicos para pagar usando casillas de verificación (checkboxes) individuales.
+    *   Se añadió una opción de "Seleccionar Todo" por cada miembro del personal para agilizar la selección masiva de servicios.
+    *   El total a pagar se calcula y actualiza en tiempo real en la interfaz a medida que se seleccionan los servicios.
+    *   El botón "Crear Lote de Pago" se activa solo cuando hay al menos un servicio seleccionado y muestra la cantidad de servicios que se incluirán.
+    *   Al confirmar la creación del lote, el sistema ejecuta una transacción que:
+        1.  Crea un registro en la tabla `Lotes_Pago` con el monto total calculado.
+        2.  Crea los registros correspondientes en `Detalles_Lote_Pago` para vincular cada servicio pagado.
+        3.  Actualiza el `estado_pago` de los servicios incluidos a `PAGADO`.
+    *   La lista de pagos pendientes se actualiza automáticamente después de la liquidación, eliminando los servicios que ya fueron pagados.
+*   **Decisiones de Implementación:**
+    *   **Manejo de Estado Complejo:** Se utilizó el estado de React (`useState`) para gestionar la selección de servicios (`selectedServices`) por cada miembro del personal, permitiendo una interfaz interactiva y responsiva.
+    *   **Lógica Transaccional del Lado del Cliente:** El proceso de creación del lote, los detalles y la actualización de los servicios se maneja como una secuencia de operaciones asíncronas. Aunque no es una transacción de base de datos atómica nativa, se incluyó manejo de errores en cada paso para alertar al usuario si alguna parte del proceso falla.
+    *   **Feedback al Usuario:** Se implementaron estados de carga (`pagando`) para deshabilitar el botón de pago durante el procesamiento y evitar clics duplicados. Se usan alertas de confirmación (`window.confirm`) para acciones críticas e irreversibles, y notificaciones (`alert`) para comunicar el éxito o el fracaso de la operación.
+    *   **Mejora de Usabilidad (Filtro):** Se añadió una barra de búsqueda para filtrar al personal por nombre, mejorando drásticamente la usabilidad en organizaciones con una gran cantidad de empleados.
+    *   **Corrección de Visualización de Fecha:** Se corrigió un error visual para mostrar la `fecha_hora_evento` del contrato en lugar de la fecha de creación, proporcionando información más relevante al administrador.
+
 
 
 
