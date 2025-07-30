@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/app/lib/supabase';
 import type { User } from '@supabase/supabase-js';
 
@@ -20,6 +20,7 @@ interface Contrato {
   id: number;
   fecha_hora_evento: string;
   estado: string;
+  estado_asignacion: 'PENDIENTE' | 'COMPLETO';
   Contratadores: { nombre: string } | null;
   Tipos_Contrato: { nombre: string } | null;
   Personal: { nombre: string } | null;
@@ -33,7 +34,7 @@ const AddContratoForm = ({
 }: {
   contratadores: Contratador[];
   tiposContrato: TipoContrato[];
-  onAddContrato: (contrato: Omit<Contrato, 'id' | 'estado' | 'Contratadores' | 'Tipos_Contrato' | 'Personal'> & { id_contratador: number; id_tipo_contrato: number }) => void;
+  onAddContrato: (contrato: Omit<Contrato, 'id' | 'estado' | 'estado_asignacion' | 'Contratadores' | 'Tipos_Contrato' | 'Personal'> & { id_contratador: number; id_tipo_contrato: number }) => void;
 }) => {
   const [idContratador, setIdContratador] = useState('');
   const [idTipoContrato, setIdTipoContrato] = useState('');
@@ -94,19 +95,25 @@ const ContratosTable = ({ contratos }: { contratos: Contrato[] }) => (
           <th className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase">Fecha Evento</th>
           <th className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase">Responsable</th>
           <th className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase">Estado</th>
+          <th className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase">Asignación</th>
         </tr>
       </thead>
       <tbody className="bg-slate-800 divide-y divide-slate-700">
         {contratos.length > 0 ? contratos.map((c) => (
-          <tr key={c.id} className="hover:bg-slate-700 cursor-pointer">
+          <tr key={c.id} className={`hover:bg-slate-700 cursor-pointer ${c.estado_asignacion === 'PENDIENTE' ? 'bg-yellow-900/20' : ''}`}>
             <td className="px-6 py-4 text-sm text-white"><Link href={`/dashboard/contratos/${c.id}`}>{c.Contratadores?.nombre}</Link></td>
             <td className="px-6 py-4 text-sm text-slate-300"><Link href={`/dashboard/contratos/${c.id}`}>{c.Tipos_Contrato?.nombre}</Link></td>
             <td className="px-6 py-4 text-sm text-slate-300"><Link href={`/dashboard/contratos/${c.id}`}>{new Date(c.fecha_hora_evento).toLocaleString()}</Link></td>
             <td className="px-6 py-4 text-sm text-slate-300"><Link href={`/dashboard/contratos/${c.id}`}>{c.Personal?.nombre}</Link></td>
             <td className="px-6 py-4 text-sm"><Link href={`/dashboard/contratos/${c.id}`}><span className="px-3 py-1 text-xs font-semibold rounded-full bg-blue-900 text-blue-200">{c.estado}</span></Link></td>
+            <td className="px-6 py-4 text-sm">
+              <span className={`px-3 py-1 text-xs font-semibold rounded-full ${c.estado_asignacion === 'COMPLETO' ? 'bg-green-900 text-green-200' : 'bg-yellow-900 text-yellow-200'}`}>
+                {c.estado_asignacion}
+              </span>
+            </td>
           </tr>
         )) : (
-          <tr><td colSpan={5} className="text-center py-10 text-slate-400">No hay contratos registrados.</td></tr>
+          <tr><td colSpan={6} className="text-center py-10 text-slate-400">No hay contratos registrados.</td></tr>
         )}
       </tbody>
     </table>
@@ -122,6 +129,22 @@ export default function ContratosPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const fetchContratos = useCallback(async (orgId: number) => {
+    const { data, error } = await supabase
+      .from('Contratos')
+      .select(`*, Contratadores(nombre), Tipos_Contrato(nombre), Personal!id_personal_administrativo(nombre)`)
+      .eq('id_organizacion', orgId)
+      .order('id', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching contratos:', error);
+      setError(error.message);
+      setContratos([]);
+    } else {
+      setContratos(data || []);
+    }
+  }, []);
+
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
@@ -131,20 +154,19 @@ export default function ContratosPage() {
 
         const { data: adminData } = await supabase.from('Personal').select('id_organizacion').eq('supabase_user_id', user.id).single();
         if (!adminData) throw new Error('No se encontró la organización del admin.');
+        const orgId = adminData.id_organizacion;
 
-        const [contratadoresRes, tiposContratoRes, contratosRes] = await Promise.all([
-          supabase.from('Contratadores').select('id, nombre').eq('id_organizacion', adminData.id_organizacion).eq('es_activo', true),
-          supabase.from('Tipos_Contrato').select('id, nombre').eq('id_organizacion', adminData.id_organizacion).eq('es_activo', true),
-          supabase.from('Contratos').select(`*, Contratadores(nombre), Tipos_Contrato(nombre), Personal!id_personal_administrativo(nombre)`).eq('id_organizacion', adminData.id_organizacion).order('id', { ascending: false })
+        const [contratadoresRes, tiposContratoRes] = await Promise.all([
+          supabase.from('Contratadores').select('id, nombre').eq('id_organizacion', orgId).eq('es_activo', true),
+          supabase.from('Tipos_Contrato').select('id, nombre').eq('id_organizacion', orgId).eq('es_activo', true),
         ]);
 
         if (contratadoresRes.error) throw contratadoresRes.error;
         if (tiposContratoRes.error) throw tiposContratoRes.error;
-        if (contratosRes.error) throw contratosRes.error;
 
         setContratadores(contratadoresRes.data || []);
         setTiposContrato(tiposContratoRes.data || []);
-        setContratos(contratosRes.data || []);
+        fetchContratos(orgId);
 
       } catch (err: any) {
         setError(err.message);
@@ -153,39 +175,37 @@ export default function ContratosPage() {
       }
     };
     fetchInitialData();
-  }, []);
+  }, [fetchContratos]);
 
-  const handleAddContrato = async (contratoData: Omit<Contrato, 'id' | 'estado' | 'Contratadores' | 'Tipos_Contrato' | 'Personal'> & { id_contratador: number; id_tipo_contrato: number }) => {
+  const handleAddContrato = async (contratoData: Omit<Contrato, 'id' | 'estado' | 'estado_asignacion' | 'Contratadores' | 'Tipos_Contrato' | 'Personal'> & { id_contratador: number; id_tipo_contrato: number }) => {
     if (!user) return;
     try {
       const { data: adminData } = await supabase.from('Personal').select('id, id_organizacion').eq('supabase_user_id', user.id).single();
       if (!adminData) throw new Error('No se pudo obtener el perfil del admin.');
 
-      // Paso 1: Crear el contrato
       const { data: newContrato, error: contratoError } = await supabase.from('Contratos').insert({
         ...contratoData,
         id_organizacion: adminData.id_organizacion,
         id_personal_administrativo: adminData.id,
         created_by: adminData.id,
         estado: 'ACTIVO',
-      }).select('id, *, Contratadores(nombre), Tipos_Contrato(nombre), Personal:Personal!id_personal_administrativo(nombre)').single();
+        estado_asignacion: 'PENDIENTE',
+      }).select('id').single();
 
       if (contratoError) throw contratoError;
       if (!newContrato) throw new Error('No se pudo obtener el ID del nuevo contrato.');
 
-      // Paso 2: Crear el evento asociado
       const { error: eventoError } = await supabase.from('Eventos_Contrato').insert({
         id_contrato: newContrato.id,
         id_organizacion: adminData.id_organizacion,
       });
 
       if (eventoError) {
-        // Si falla la creación del evento, se intenta borrar el contrato para evitar datos huérfanos.
         await supabase.from('Contratos').delete().eq('id', newContrato.id);
         throw eventoError;
       }
 
-      setContratos([newContrato, ...contratos]);
+      fetchContratos(adminData.id_organizacion);
       alert('Contrato y evento registrados con éxito!');
     } catch (err: any) {
       alert(`Error al registrar el contrato: ${err.message}`);

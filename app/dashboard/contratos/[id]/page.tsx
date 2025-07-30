@@ -3,7 +3,7 @@
 import { useEffect, useState, Fragment } from 'react';
 import { supabase } from '@/app/lib/supabase';
 import { useParams, useRouter } from 'next/navigation';
-import { FiPlus, FiArrowLeft } from 'react-icons/fi';
+import { FiPlus, FiArrowLeft, FiCheckCircle } from 'react-icons/fi';
 import Link from 'next/link';
 
 // --- INTERFACES ---
@@ -11,6 +11,7 @@ interface ContratoDetails {
   id: number;
   fecha_hora_evento: string;
   estado: string;
+  estado_asignacion: 'PENDIENTE' | 'COMPLETO';
   id_organizacion: number;
   Contratadores: { nombre: string } | null;
   Tipos_Contrato: { nombre: string, ingreso_base: number } | null;
@@ -251,6 +252,27 @@ export default function ContratoDetailPage() {
     }
   };
 
+  const handleConfirmarAsignaciones = async () => {
+    if (!contrato) return;
+    if (window.confirm('¿Estás seguro de que has terminado de asignar personal y servicios? Esta acción marcará el contrato como listo para los siguientes pasos.')) {
+      try {
+        const { data, error } = await supabase
+          .from('Contratos')
+          .update({ estado_asignacion: 'COMPLETO' })
+          .eq('id', contrato.id)
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        setContrato(prev => prev ? { ...prev, estado_asignacion: 'COMPLETO' } : null);
+        alert('Las asignaciones han sido confirmadas.');
+      } catch (err: any) {
+        alert(`Error al confirmar las asignaciones: ${err.message}`);
+      }
+    }
+  };
+
   const handleEliminarContrato = async () => {
     if (!contrato) return;
     const confirmation = window.prompt('Para confirmar la eliminación, escribe "eliminar" en el campo de abajo. Esta acción no se puede deshacer.');
@@ -283,22 +305,33 @@ export default function ContratoDetailPage() {
           <FiArrowLeft />
           Volver a Contratos
         </Link>
-        {contrato.estado !== 'COMPLETADO' && (
-          <Fragment>
+        <div className="flex items-center gap-4">
+          {contrato.estado !== 'COMPLETADO' && contrato.estado_asignacion === 'PENDIENTE' && (
+            <button 
+              onClick={handleConfirmarAsignaciones}
+              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors"
+            >
+              <FiCheckCircle />
+              Confirmar Asignaciones
+            </button>
+          )}
+          {contrato.estado !== 'COMPLETADO' && (
             <button 
               onClick={handleCerrarContrato}
               className="px-4 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-colors"
             >
               Cerrar Contrato
             </button>
+          )}
+          {contrato.estado !== 'COMPLETADO' && (
             <button 
               onClick={handleEliminarContrato}
               className="px-4 py-2 bg-gray-700 text-white font-semibold rounded-lg hover:bg-gray-800 transition-colors"
             >
               Eliminar Contrato
             </button>
-          </Fragment>
-        )}
+          )}
+        </div>
       </div>
       <div className="space-y-8">
         <div className="bg-slate-800 p-6 rounded-xl border border-slate-700">
@@ -308,14 +341,14 @@ export default function ContratoDetailPage() {
             value={selectedPersonal}
             onChange={(e) => setSelectedPersonal(e.target.value)}
             className="flex-grow px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white disabled:bg-slate-800 disabled:cursor-not-allowed"
-            disabled={contrato.estado === 'COMPLETADO'}
+            disabled={contrato.estado === 'COMPLETADO' || contrato.estado_asignacion === 'COMPLETO'}
           >
             <option value="">-- Seleccionar personal --</option>
             {personalOperativo.map(p => (
               <option key={p.id} value={p.id}>{p.nombre}</option>
             ))}
           </select>
-          <button onClick={handleAsignarPersonal} className="px-6 py-2 bg-sky-600 text-white font-semibold rounded-lg hover:bg-sky-700 disabled:bg-sky-800 disabled:cursor-not-allowed" disabled={contrato.estado === 'COMPLETADO'}>Asignar</button>
+          <button onClick={handleAsignarPersonal} className="px-6 py-2 bg-sky-600 text-white font-semibold rounded-lg hover:bg-sky-700 disabled:bg-sky-800 disabled:cursor-not-allowed" disabled={contrato.estado === 'COMPLETADO' || contrato.estado_asignacion === 'COMPLETO'}>Asignar</button>
         </div>
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-slate-700">
@@ -359,13 +392,13 @@ export default function ContratoDetailPage() {
                       {p.hora_llegada ? new Date(p.hora_llegada).toLocaleTimeString() : 'N/A'}
                     </td>
                     <td className="px-6 py-4 align-top text-sm">
-                      <button onClick={() => handleOpenModal(p.id)} className="flex items-center gap-2 text-sky-400 hover:text-sky-300 font-semibold disabled:text-slate-500 disabled:cursor-not-allowed" disabled={contrato.estado === 'COMPLETADO'}>
+                      <button onClick={() => handleOpenModal(p.id)} className="flex items-center gap-2 text-sky-400 hover:text-sky-300 font-semibold disabled:text-slate-500 disabled:cursor-not-allowed" disabled={contrato.estado === 'COMPLETADO' || contrato.estado_asignacion === 'COMPLETO'}>
                         <FiPlus /> Asignar Servicio
                       </button>
                     </td>
                   </tr>
                 ))}
-                {participaciones.length === 0 && <tr><td colSpan={4} className="text-center py-8 text-slate-500">No hay personal asignado.</td></tr>}
+                {participaciones.length === 0 && <tr><td colSpan={5} className="text-center py-8 text-slate-500">No hay personal asignado.</td></tr>}
               </tbody>
             </table>
           </div>

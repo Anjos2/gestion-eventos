@@ -87,6 +87,7 @@ Las inserciones (`INSERT`) en **TODAS** las tablas de esta sección incrementan 
 | `id_tipo_contrato`| `INTEGER` | FK (`Tipos_Contrato.id`) | Clasificación del contrato según un catálogo de servicios predefinido. | Debe ser un ID de tipo de contrato existente y válido. | El `Tipo_Contrato` seleccionado debe p|ertenecer a la misma `id_organizacion`. |
 | `fecha_hora_evento`| `TIMESTAMP` | `NOT NULL` | Fecha y hora exactas en que el servicio del contrato debe ser ejecutado. | La fecha debe ser futura al momento de la creación/modificación del contrato. | ⏰ Usar el tipo `TIMESTAMP WITH TIME ZONE (timestamptz)`. |
 | `estado` | `VARCHAR` | `ENUM` | Ciclo de vida del contrato (`ACTIVO`, `CANCELADO`, `COMPLETADO`). | Debe pertenecer a la lista predefinida. | Usar un tipo `ENUM` de PostgreSQL. |
+| `estado_asignacion` | `VARCHAR` | `ENUM` | Estado operativo que indica si ya se asignó personal y servicios al contrato (`PENDIENTE`, `COMPLETO`). | `DEFAULT 'PENDIENTE'`. El valor debe ser `PENDIENTE` o `COMPLETO`. | Controla la lógica de la UI para saber si se pueden seguir asignando recursos al evento del contrato. |
 | `created_at` | `TIMESTAMP` | | Sello de tiempo de la creación del registro. | `DEFAULT now()` | Auditoría. |
 | `created_by` | `INTEGER` | FK (`Personal.id`) | Usuario que creó el registro. | Apunta a `Personal.id`. | Auditoría. |
 | `updated_at` | `TIMESTAMP` | | Sello de tiempo de la última modificación. | `DEFAULT now()` | Auditoría. |
@@ -398,6 +399,18 @@ Esta sección documenta las funcionalidades implementadas y las decisiones técn
     *   **Mejora de la Navegación:** Se utilizó el componente `Link` de Next.js para crear un enlace de "Volver" eficiente que no requiere una recarga completa de la página, mejorando la experiencia de navegación.
     *   **Actualización de UI en Tiempo Real:** Tanto el cambio de estado de asistencia como el cierre del contrato actualizan el estado de React localmente, proporcionando una retroalimentación visual inmediata al administrador sin necesidad de recargar la página.
     *   **Eliminación Segura de Contratos:** Se añadió la capacidad de eliminar un contrato, siempre que no esté en estado `COMPLETADO`. Para prevenir la eliminación accidental, la acción requiere que el usuario escriba la palabra "eliminar" en un cuadro de diálogo de confirmación. La eliminación se propaga en cascada en la base de datos gracias a las restricciones `ON DELETE CASCADE`, asegurando la integridad de los datos.
+
+*   **Mejora de Usabilidad: Confirmación Manual de Asignaciones**
+    *   **Funcionalidad:** Se ha añadido un flujo de trabajo para que el administrador confirme explícitamente que ha finalizado la asignación de personal y servicios a un contrato.
+        *   La tabla principal de contratos (`/dashboard/contratos`) ahora muestra un indicador visual para los contratos cuyas asignaciones están `PENDIENTE` (fondo amarillo claro), permitiendo al administrador identificar rápidamente qué contratos requieren su atención.
+        *   En la página de detalle del contrato (`/dashboard/contratos/[id]`), se ha añadido un botón "Confirmar Asignaciones".
+        *   Este botón solo es visible si el estado de asignación del contrato es `PENDIENTE` y el contrato general no está `COMPLETADO`.
+        *   Al confirmar, el estado de asignación cambia a `COMPLETO`, y todos los controles para añadir más personal o servicios se deshabilitan, "sellando" la configuración del evento.
+    *   **Decisiones de Implementación:**
+        *   **Separación de Conceptos:** Se decidió añadir una nueva columna `estado_asignacion` a la tabla `Contratos` en lugar de sobrecargar la columna `estado` existente. Esto mantiene una clara separación entre el ciclo de vida del contrato (negocio) y su estado operativo interno (asignaciones), evitando lógica compleja y confusa.
+        *   **Control del Usuario:** Se optó por un botón de confirmación manual en lugar de una detección automática. Este enfoque es más robusto, evita errores de lógica complejos y le da al administrador un control total y explícito sobre el proceso.
+        *   **Feedback Visual Claro:** El uso de colores en la tabla principal y la aparición/desaparición contextual del botón de confirmación proporcionan una guía visual intuitiva para el usuario.
+        *   **Inmutabilidad Post-Confirmación:** Deshabilitar los controles de asignación después de la confirmación asegura la integridad de los datos y previene cambios accidentales en una etapa posterior del flujo de trabajo.
 
 
 
