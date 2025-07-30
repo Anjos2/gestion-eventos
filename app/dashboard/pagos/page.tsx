@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '@/app/lib/supabase';
 import { FiCheckCircle } from 'react-icons/fi';
 import Link from 'next/link';
@@ -11,8 +11,9 @@ interface ServicioPendiente {
   servicio_nombre: string;
   monto_pactado: number;
   contrato_id: number;
-  fecha_evento: string;
-  estado_asistencia: string; // Clave para la nueva lógica
+  estado_asistencia: string;
+  fecha_contrato: string;
+  tipo_contrato_nombre: string;
 }
 
 interface PersonalConPendientes {
@@ -25,7 +26,7 @@ export default function PagosPage() {
   const [personalConPagos, setPersonalConPagos] = useState<PersonalConPendientes[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [discounts, setDiscounts] = useState<Record<number, number>>({}); // Estado para los descuentos
+  const [discounts, setDiscounts] = useState<Record<number, number>>({});
 
   useEffect(() => {
     const fetchPagosPendientes = async () => {
@@ -41,7 +42,6 @@ export default function PagosPage() {
 
         if (adminError || !adminData) throw new Error('No se pudo encontrar la organización del administrador.');
 
-        // Consulta modificada para incluir estado_asistencia y filtrar por contrato COMPLETADO
         const { data: pagosPendientes, error: pagosError } = await supabase
           .from('Evento_Servicios_Asignados')
           .select(`
@@ -51,14 +51,20 @@ export default function PagosPage() {
               estado_asistencia,
               Personal!inner(id, nombre),
               Eventos_Contrato!inner(
-                Contratos!inner(id, fecha_hora_evento, estado)
+                Contratos!inner(
+                  id,
+                  fecha_hora_evento,
+                  estado,
+                  created_at,
+                  Tipos_Contrato!inner(nombre)
+                )
               )
             ),
             Servicios!inner(nombre)
           `)
           .eq('id_organizacion', adminData.id_organizacion)
           .eq('estado_pago', 'PENDIENTE')
-          .eq('Participaciones_Personal.Eventos_Contrato.Contratos.estado', 'COMPLETADO'); // <-- Filtro nuevo
+          .eq('Participaciones_Personal.Eventos_Contrato.Contratos.estado', 'COMPLETADO');
 
         if (pagosError) throw new Error(pagosError.message);
 
@@ -68,9 +74,10 @@ export default function PagosPage() {
           const participacion = pago.Participaciones_Personal;
           const personal = participacion?.Personal;
           const contrato = participacion?.Eventos_Contrato?.Contratos;
+          const tipoContrato = contrato?.Tipos_Contrato;
           const servicio = pago.Servicios;
 
-          if (personal && contrato && servicio) {
+          if (personal && contrato && servicio && tipoContrato) {
             const idPersonal = personal.id;
             if (!agrupados[idPersonal]) {
               agrupados[idPersonal] = {
@@ -85,8 +92,9 @@ export default function PagosPage() {
               servicio_nombre: servicio.nombre,
               monto_pactado: pago.monto_pactado,
               contrato_id: contrato.id,
-              fecha_evento: new Date(contrato.fecha_hora_evento).toLocaleDateString(),
               estado_asistencia: participacion.estado_asistencia,
+              fecha_contrato: new Date(contrato.created_at).toLocaleString(),
+              tipo_contrato_nombre: tipoContrato.nombre,
             });
           }
         });
@@ -140,7 +148,7 @@ export default function PagosPage() {
                   <h2 className="text-2xl font-bold text-white mb-2 md:mb-0">{personal.nombre_personal}</h2>
                   <div className="text-right">
                     <p className="text-slate-400 text-sm">Total a Pagar</p>
-                    <p className="text-3xl font-bold text-yellow-400">${totalPendiente.toFixed(2)}</p>
+                    <p className="text-3xl font-bold text-yellow-400">S/{totalPendiente.toFixed(2)}</p>
                   </div>
                 </div>
                 
@@ -149,7 +157,9 @@ export default function PagosPage() {
                     <thead className="bg-slate-900">
                       <tr>
                         <th className="px-4 py-2 font-semibold text-slate-400 uppercase tracking-wider">Servicio</th>
-                        <th className="px-4 py-2 font-semibold text-slate-400 uppercase tracking-wider">Contrato</th>
+                        <th className="px-4 py-2 font-semibold text-slate-400 uppercase tracking-wider text-center">Contrato</th>
+                        <th className="px-4 py-2 font-semibold text-slate-400 uppercase tracking-wider">Tipo Contrato</th>
+                        <th className="px-4 py-2 font-semibold text-slate-400 uppercase tracking-wider">Fecha Contrato</th>
                         <th className="px-4 py-2 font-semibold text-slate-400 uppercase tracking-wider">Asistencia</th>
                         <th className="px-4 py-2 font-semibold text-slate-400 uppercase tracking-wider text-right">Monto a Pagar</th>
                       </tr>
@@ -166,6 +176,8 @@ export default function PagosPage() {
                               Ver Contrato
                             </Link>
                           </td>
+                          <td className="px-4 py-3">{servicio.tipo_contrato_nombre}</td>
+                          <td className="px-4 py-3">{servicio.fecha_contrato}</td>
                           <td className="px-4 py-3">
                             <span className={`px-2 py-1 text-xs font-semibold rounded-full ${{
                               PUNTUAL: 'bg-green-900 text-green-200',
@@ -179,18 +191,18 @@ export default function PagosPage() {
                           <td className="px-4 py-3 text-right font-mono">
                             {servicio.estado_asistencia === 'TARDANZA' ? (
                               <div className="flex items-center justify-end gap-2">
-                                <span className="text-slate-400 line-through">${servicio.monto_pactado.toFixed(2)}</span>
+                                <span className="text-slate-400 line-through">S/{servicio.monto_pactado.toFixed(2)}</span>
                                 <input 
                                   type="number"
                                   placeholder="% Dcto."
                                   onChange={(e) => handleDiscountChange(servicio.id_servicio_asignado, e.target.value)}
                                   className="w-24 bg-slate-700 border border-slate-600 rounded-md p-1 text-center text-white"
                                 />
-                                <span className="font-bold text-yellow-400">${calculateFinalAmount(servicio).toFixed(2)}</span>
+                                <span className="font-bold text-yellow-400">S/{calculateFinalAmount(servicio).toFixed(2)}</span>
                               </div>
                             ) : (
                               <span className={`${servicio.estado_asistencia === 'AUSENTE' ? 'text-red-400' : 'text-white'}`}>
-                                ${calculateFinalAmount(servicio).toFixed(2)}
+                                S/{calculateFinalAmount(servicio).toFixed(2)}
                               </span>
                             )}
                           </td>

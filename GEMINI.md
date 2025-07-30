@@ -425,7 +425,7 @@ Esta sección documenta las funcionalidades implementadas y las decisiones técn
     *   **Patrón de Componente de Cliente:** La página se construyó como un componente de cliente (`'use client'`), siguiendo el patrón establecido en el resto de la aplicación para garantizar la coherencia y evitar conflictos de renderizado.
     *   **Consulta de BD Específica:** La consulta a Supabase se optimizó para traer solo los datos necesarios, filtrando por `contrato.estado = 'COMPLETADO'` e incluyendo el `estado_asistencia` del participante, que es crucial para la lógica de negocio.
     *   **Manejo de Estado en la UI:** Se utilizó el estado de React (`useState`) para gestionar los descuentos introducidos por el usuario, permitiendo que los cálculos del total a pagar por persona se realicen y reflejen en la interfaz en tiempo real sin necesidad de recargar la página.
-    *   **Usabilidad Mejorada:** Se reemplazaron los simples IDs de contrato por enlaces directos y se añadieron indicadores visuales (colores y texto) para el estado de asistencia, mejorando la claridad y la experiencia del administrador.
+    *   **Usabilidad Mejorada:** Se reemplazaron los simples IDs de contrato por enlaces directos y se añadieron indicadores visuales (colores y texto) para el estado de asistencia, mejorando la claridad y la experiencia del administrador. Se incorporaron columnas adicionales como "Tipo de Contrato" y "Fecha Contrato" (con hora) para dar más contexto, y se corrigió la moneda a Soles (S/) en toda la vista.
 
 
 
