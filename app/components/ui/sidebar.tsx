@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { FiHome, FiUsers, FiBriefcase, FiFileText, FiTool, FiClipboard, FiCreditCard } from 'react-icons/fi';
+import { FiHome, FiUsers, FiBriefcase, FiFileText, FiTool, FiClipboard, FiCreditCard, FiBarChart2 } from 'react-icons/fi';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: <FiHome /> },
@@ -10,6 +10,7 @@ const navItems = [
   { href: '/dashboard/servicios', label: 'Servicios', icon: <FiTool /> },
   { href: '/dashboard/contratos', label: 'Contratos', icon: <FiClipboard /> },
   { href: '/dashboard/pagos', label: 'Pagos', icon: <FiCreditCard /> },
+  { href: '/dashboard/reportes', label: 'Reportes', icon: <FiBarChart2 /> },
 ];
 
 export default function Sidebar() {
@@ -27,7 +28,7 @@ export default function Sidebar() {
               <Link
                 href={item.href}
                 className={`flex items-center space-x-3 p-3 rounded-lg transition-all duration-200 font-semibold ${
-                  pathname === item.href
+                  pathname.startsWith(item.href) && (item.href !== '/dashboard' || pathname === '/dashboard')
                     ? 'bg-sky-500 text-white shadow-lg'
                     : 'hover:bg-slate-800 hover:text-white'
                 }`}

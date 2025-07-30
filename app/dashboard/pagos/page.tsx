@@ -199,10 +199,13 @@ export default function PagosPage() {
       if (loteError) throw new Error(`Error al crear el lote de pago: ${loteError.message}`);
       const id_lote_pago = lotePago.id;
 
-      const detallesLote = selectedForPerson.map(id_servicio => ({
+      const detallesLote = servicesToPay.map(service => ({
         id_organizacion,
         id_lote_pago,
-        id_evento_servicio_asignado: id_servicio,
+        id_evento_servicio_asignado: service.id_servicio_asignado,
+        monto_pagado: calculateFinalAmount(service),
+        estado_asistencia_registrado: service.estado_asistencia,
+        descuento_aplicado_pct: service.estado_asistencia === 'TARDANZA' ? discounts[service.id_servicio_asignado] || 0 : 0,
       }));
 
       const { error: detallesError } = await supabase.from('Detalles_Lote_Pago').insert(detallesLote);

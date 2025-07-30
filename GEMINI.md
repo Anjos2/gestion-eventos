@@ -144,6 +144,9 @@ Las inserciones (`INSERT`) en **TODAS** las tablas de esta sección incrementan 
 | `id_organizacion` | `INTEGER` | FK (`Organizaciones.id`) | Organización del lote, denormalizada para optimizar. | Debe ser un ID de organización válido. | Clave para RLS y trigger de conteo. 📈 **Contabilizado.** |
 | `id_lote_pago` | `INTEGER` | PK, FK (`Lotes_Pago.id`) | Referencia al lote de pago principal. | Debe ser un ID de lote de pago existente. | `ON DELETE CASCADE`. |
 | `id_evento_servicio_asignado`| `INTEGER` | PK, FK (`Evento_Servicios_Asignados.id`) | Referencia al servicio específico que se está pagando. | Debe ser un ID de servicio asignado válido. | ⛓️ **Tabla de unión crucial.** `PRIMARY KEY (id_lote_pago, id_evento_servicio_asignado)` garantiza que un servicio solo se pague una vez. |
+| `monto_pagado` | `DECIMAL` | `NOT NULL` | Monto final que se pagó por el servicio, después de aplicar descuentos o anulaciones. | `CHECK (monto_pagado >= 0.00)`. | 🛡️ **Auditoría Clave.** Este es el valor real de la transacción, que puede diferir del `monto_pactado` original. |
+| `estado_asistencia_registrado` | `VARCHAR` | `NULLABLE` | Copia del estado de asistencia (`PUNTUAL`, `TARDANZA`, `AUSENTE`) en el momento del pago. | - | Preserva el contexto del pago para auditorías futuras. |
+| `descuento_aplicado_pct` | `DECIMAL` | `NULLABLE` | Porcentaje de descuento aplicado en caso de `TARDANZA`. | `CHECK (descuento_aplicado_pct >= 0 AND descuento_aplicado_pct <= 100)`. | Almacena el `%` exacto para total transparencia en el reporte. |
 ---
 ## Modelo de Plataforma y Flujo de Trabajo (v2.0 - Autoservicio)
 
@@ -440,11 +443,18 @@ Esta sección documenta las funcionalidades implementadas y las decisiones técn
     *   La lista de pagos pendientes se actualiza automáticamente después de la liquidación, eliminando los servicios que ya fueron pagados.
 *   **Decisiones de Implementación:**
     *   **Manejo de Estado Complejo:** Se utilizó el estado de React (`useState`) para gestionar la selección de servicios (`selectedServices`) por cada miembro del personal, permitiendo una interfaz interactiva y responsiva.
-    *   **Lógica Transaccional del Lado del Cliente:** El proceso de creación del lote, los detalles y la actualización de los servicios se maneja como una secuencia de operaciones asíncronas. Aunque no es una transacción de base de datos atómica nativa, se incluyó manejo de errores en cada paso para alertar al usuario si alguna parte del proceso falla.
+    *   **Lógica Transaccional del Lado del Cliente:** El proceso de creación del lote, los detalles y la actualización de los servicios se maneja como una serie de operaciones asíncronas. Aunque no es una transacción de base de datos atómica nativa, se incluyó manejo de errores en cada paso para alertar al usuario si alguna parte del proceso falla.
     *   **Feedback al Usuario:** Se implementaron estados de carga (`pagando`) para deshabilitar el botón de pago durante el procesamiento y evitar clics duplicados. Se usan alertas de confirmación (`window.confirm`) para acciones críticas e irreversibles, y notificaciones (`alert`) para comunicar el éxito o el fracaso de la operación.
     *   **Mejora de Usabilidad (Filtro):** Se añadió una barra de búsqueda para filtrar al personal por nombre, mejorando drásticamente la usabilidad en organizaciones con una gran cantidad de empleados.
     *   **Corrección de Visualización de Fecha:** Se corrigió un error visual para mostrar la `fecha_hora_evento` del contrato en lugar de la fecha de creación, proporcionando información más relevante al administrador.
 
-
-
-
+### 12. **Reporte de Pagos Históricos por Personal (HU-12)**
+*   **Funcionalidad:** Se ha implementado el reporte de pagos históricos, accesible desde una nueva sección "Reportes" en el menú principal.
+    *   La página (`/dashboard/reportes/pagos-personal`) permite a los administradores filtrar por miembro del personal y un rango de fechas.
+    *   Al generar el reporte, se muestra una lista de todos los lotes de pago emitidos para esa persona en el período seleccionado.
+    *   Cada lote de pago detalla los servicios individuales que se incluyeron, el monto exacto que se pagó por cada uno y una columna de "Observaciones" que clarifica el estado de asistencia (`PUNTUAL`, `TARDANZA`, `AUSENTE`) y el descuento aplicado si lo hubo.
+*   **Decisiones de Implementación:**
+    *   **Navegación Centralizada:** Se creó una página principal de reportes (`/dashboard/reportes`) para servir como un hub central para todos los futuros reportes, mejorando la organización y escalabilidad del módulo.
+    *   **Mejora de la Integridad de Datos (Auditoría):** Se tomó la decisión crítica de modificar la estructura de la base de datos para garantizar la precisión contable. Se añadieron las columnas `monto_pagado`, `estado_asistencia_registrado` y `descuento_aplicado_pct` a la tabla `Detalles_Lote_Pago`. Esto asegura que cada transacción de pago se registre con todos los detalles relevantes en el momento exacto de la liquidación, haciendo los reportes históricos 100% fiables e inmunes a cambios futuros en los datos de origen (como el estado de asistencia o los montos base de los servicios).
+    *   **Corrección de Errores en Cascada:** La implementación inicial del reporte reveló una discrepancia en los montos. Esto llevó a la refactorización de la lógica de creación de lotes de pago para que almacenara los montos finales calculados y los detalles de asistencia, y posteriormente se actualizó el componente del reporte para que leyera y mostrara esta nueva información precisa.
+    *   **Experiencia de Usuario en Reportes:** La interfaz del reporte se diseñó para ser clara y funcional, con filtros fáciles de usar y una presentación de datos que prioriza la legibilidad y la información clave para la auditoría de pagos.
