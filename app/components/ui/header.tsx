@@ -22,8 +22,7 @@ export default function Header() {
   };
 
   return (
-    <header className="bg-slate-900 border-b border-slate-800 p-4 flex justify-between items-center">
-      <h2 className="text-2xl font-bold text-white">Dashboard</h2>
+    <header className="bg-slate-900 border-b border-slate-800 p-4 flex justify-end items-center">
       
       <div className="relative">
         <button 

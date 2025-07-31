@@ -554,3 +554,17 @@ Esta sección documenta la implementación de un nuevo flujo de trabajo donde el
     2.  **Diagnóstico Correcto (Inspección de Esquema):** Se ejecutó una consulta `information_schema` para inspeccionar la estructura real de las tablas. Esta consulta reveló que las columnas de estado eran de tipo `VARCHAR` y estaban restringidas por `CHECK constraints`.
 *   **Solución Implementada:**
     *   **Migración de Constraints:** Se ejecutó una migración de base de datos para `DROP` (eliminar) los `CHECK constraints` antiguos y `ADD` (añadir) unos nuevos y actualizados en las tablas `Lotes_Pago` y `Evento_Servicios_Asignados`. Los nuevos constraints ahora incluyen todos los valores de estado requeridos por el nuevo flujo de aprobación (`PENDIENTE_APROBACION`, `EN_LOTE`, etc.), solucionando el error de forma definitiva.
+
+### 4. **Rediseño del Dashboard y Personalización de la Interfaz (Mejora de UX)**
+*   **Funcionalidad:** Se ha rediseñado por completo la página principal del dashboard (`/dashboard`) para convertirla en un centro de mando personalizado y accionable, mejorando significativamente la experiencia del usuario administrador.
+    *   **Personalización:** El título principal de la aplicación en la barra lateral ahora muestra dinámicamente el **nombre de la organización** del usuario. La etiqueta de navegación "Dashboard" se ha localizado a **"Resumen"** y se ha eliminado el título redundante de la cabecera para una interfaz más limpia y enfocada.
+    *   **KPIs Accionables:** Se reemplazaron las métricas anteriores por cuatro nuevas tarjetas de estadísticas que responden a las preguntas clave del día a día y enlazan directamente a las secciones relevantes:
+        1.  **Contratos por Confirmar:** Llama a la acción sobre eventos que requieren asignación final.
+        2.  **Pagos Pend. Aprobación:** Muestra el estado de los pagos que esperan confirmación del personal.
+        3.  **Contratos Completados:** Ofrece una vista rápida de la productividad reciente (últimos 30 días).
+        4.  **Próximo Evento:** Informa sobre la tarea más inminente, mostrando detalles del cliente y la fecha.
+*   **Decisiones de Implementación:**
+    *   **Lógica Centralizada y Optimizada:** Toda la lógica para obtener los KPIs se centralizó en la página `/dashboard/page.tsx`. Se utilizan consultas paralelas (`Promise.all`) para cargar todos los datos de forma eficiente.
+    *   **Creación de Vista en BD:** Para solucionar un error de consulta compleja (similar a uno anterior), se creó una nueva vista de base de datos (`dashboard_pagos_pendientes_flat`), demostrando un enfoque robusto y reutilizable para la obtención de datos aplanados.
+    *   **Personalización del Sidebar:** Se modificó el componente `app/components/ui/sidebar.tsx` para que, al iniciar sesión, obtenga tanto el rol del usuario como el nombre de su organización, almacenándolos en el estado para personalizar la UI dinámicamente.
+    *   **Componente Reutilizable:** Se diseñó un componente `DashboardCard` para las tarjetas de KPI, asegurando la consistencia visual y facilitando la adición de nuevas métricas en el futuro.

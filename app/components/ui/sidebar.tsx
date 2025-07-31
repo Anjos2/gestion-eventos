@@ -6,12 +6,9 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/app/lib/supabase';
 import { FiHome, FiUsers, FiBriefcase, FiFileText, FiTool, FiClipboard, FiCreditCard, FiBarChart2, FiDollarSign } from 'react-icons/fi';
 
-// Define los roles
-type UserRole = 'ADMINISTRATIVO' | 'OPERATIVO' | null;
-
 // Define los items de navegación para cada rol
 const navItemsAdmin = [
-  { href: '/dashboard', label: 'Dashboard', icon: <FiHome /> },
+  { href: '/dashboard', label: 'Resumen', icon: <FiHome /> },
   { href: '/dashboard/personal', label: 'Personal', icon: <FiUsers /> },
   { href: '/dashboard/contratadores', label: 'Contratadores', icon: <FiBriefcase /> },
   { href: '/dashboard/tipos-contrato', label: 'Tipos de Contrato', icon: <FiFileText /> },
@@ -22,13 +19,14 @@ const navItemsAdmin = [
 ];
 
 const navItemsOperativo = [
-  { href: '/dashboard', label: 'Dashboard', icon: <FiHome /> },
+  { href: '/dashboard', label: 'Resumen', icon: <FiHome /> },
   { href: '/dashboard/mis-pagos', label: 'Mis Pagos', icon: <FiDollarSign /> },
 ];
 
 export default function Sidebar() {
   const pathname = usePathname();
   const [userRole, setUserRole] = useState<UserRole>(null);
+  const [orgName, setOrgName] = useState<string>('GestiónApp');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -38,13 +36,16 @@ export default function Sidebar() {
         if (user) {
           const { data: personal, error } = await supabase
             .from('Personal')
-            .select('rol')
+            .select('rol, Organizaciones(nombre)')
             .eq('supabase_user_id', user.id)
             .single();
 
-          if (error) throw new Error('No se pudo obtener el rol del usuario.');
+          if (error) throw new Error('No se pudo obtener la información del usuario.');
           if (personal) {
             setUserRole(personal.rol as UserRole);
+            if (personal.Organizaciones) {
+              setOrgName(personal.Organizaciones.nombre);
+            }
           }
         }
       } catch (error) {
@@ -58,13 +59,18 @@ export default function Sidebar() {
     fetchUserRole();
   }, []);
 
-  const navItems = userRole === 'ADMINISTRATIVO' ? navItemsAdmin : navItemsOperativo;
+  const navItems = (userRole === 'ADMINISTRATIVO' ? navItemsAdmin : navItemsOperativo).map(item => {
+    if (item.href === '/dashboard') {
+      return { ...item, label: 'Resumen' };
+    }
+    return item;
+  });
 
   if (loading) {
     return (
       <aside className="w-64 h-screen bg-slate-900 text-slate-300 flex flex-col border-r border-slate-800">
         <div className="p-6 text-center">
-          <h1 className="text-3xl font-bold text-white tracking-wider">GestiónApp</h1>
+          <div className="h-8 bg-slate-800 rounded-lg animate-pulse w-3/4 mx-auto"></div>
         </div>
         <div className="flex-1 px-4 py-4">
           {/* Skeleton loading state */}
@@ -81,7 +87,7 @@ export default function Sidebar() {
   return (
     <aside className="w-64 h-screen bg-slate-900 text-slate-300 flex flex-col border-r border-slate-800">
       <div className="p-6 text-center">
-        <h1 className="text-3xl font-bold text-white tracking-wider">GestiónApp</h1>
+        <h1 className="text-3xl font-bold text-white tracking-wider truncate">{orgName}</h1>
       </div>
       <nav className="flex-1 px-4 py-4">
         <ul className="space-y-2">
