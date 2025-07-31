@@ -80,12 +80,14 @@ export default function LoginPage() {
             </button>
           </div>
         </form>
-        <p className="text-sm text-center text-slate-400">
-          ¿No tienes una cuenta?{' '}
-          <Link href="/auth/register" className="font-medium text-sky-400 hover:text-sky-300">
-            Regístrate aquí
-          </Link>
-        </p>
+        <div className="text-center text-sm text-slate-400 space-y-2">
+          <p>
+            ¿Quieres crear una nueva organización?{' '}
+            <Link href="/auth/register" className="font-medium text-sky-400 hover:text-sky-300">
+              Regístrate como Administrador
+            </Link>
+          </p>
+        </div>
       </div>
     </div>
   );

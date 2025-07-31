@@ -121,7 +121,7 @@ Las inserciones (`INSERT`) en **TODAS** las tablas de esta sección incrementan 
 | `id_participacion` | `INTEGER` | FK (`Participaciones_Personal.id`) | Referencia a la participación específica (persona + evento) a la que se asigna el servicio. | Debe ser un ID de participación válido. | **Vínculo clave.** Define quién hizo qué. |
 | `id_servicio` | `INTEGER` | FK (`Servicios.id`) | Referencia al servicio del catálogo que fue ejecutado. | Debe ser un ID de servicio válido. | `UNIQUE` en `(id_participacion, id_servicio)` para no asignar el mismo servicio dos veces. |
 | `monto_pactado` | `DECIMAL` | `NOT NULL` | Monto exacto que se pagará por este servicio. | El valor debe ser un número no negativo (`>= 0.00`). | 💵 **Precio "congelado".** Se copia el `monto_base` del servicio para preservar la integridad histórica. |
-| `estado_pago` | `VARCHAR` | `ENUM` | Controla el ciclo de vida del pago (`PENDIENTE`, `PAGADO`, `ANULADO`). | Debe pertenecer a la lista predefinida. | `DEFAULT 'PENDIENTE'`. |
+| `estado_pago` | `VARCHAR` | `ENUM` | Controla el ciclo de vida del pago (`PENDIENTE`, `EN_LOTE`, `PAGADO`, `ANULADO`). | Debe pertenecer a la lista predefinida. | `DEFAULT 'PENDIENTE'`. `EN_LOTE` es un estado intermedio. |
 
 ---
 ### Tabla: `Lotes_Pago`
@@ -133,7 +133,7 @@ Las inserciones (`INSERT`) en **TODAS** las tablas de esta sección incrementan 
 | `id_personal_administrativo` | `INTEGER` | FK (`Personal.id`) | Usuario que crea y autoriza el lote de pago. | Debe ser un ID de personal con rol `Administrativo`. | Auditoría de quién autorizó el pago. |
 | `monto_total` | `DECIMAL` | `NOT NULL` | Suma total de los montos de todos los servicios incluidos en el lote. | >= 0.00. | Campo desnormalizado para optimizar consultas y reportes de pago. |
 | `fecha_pago` | `DATE` | `NOT NULL` | Fecha contable en la que se emitió el pago del lote. | Debe ser una fecha válida en formato `YYYY-MM-DD`. | - |
-| `estado` | `VARCHAR` | `ENUM` | Ciclo de vida del lote (`PROCESANDO`, `COMPLETADO`, `FALLIDO`). | Debe pertenecer a la lista predefinida. | Un lote `COMPLETADO` debe ser inmutable. |
+| `estado` | `VARCHAR` | `ENUM` | Ciclo de vida del lote (`PENDIENTE_APROBACION`, `PAGADO`, `RECLAMADO`, `FALLIDO`). | Debe pertenecer a la lista predefinida. | Un lote `PAGADO` debe ser inmutable. |
 | `created_at` | `TIMESTAMP` | | Sello de tiempo de la creación del lote. | `DEFAULT now()` | Auditoría. |
 | `created_by` | `INTEGER` | FK (`Personal.id`) | Coincide con `id_personal_administrativo`. | Apunta a `Personal.id`. | Auditoría. |
 
@@ -147,6 +147,23 @@ Las inserciones (`INSERT`) en **TODAS** las tablas de esta sección incrementan 
 | `monto_pagado` | `DECIMAL` | `NOT NULL` | Monto final que se pagó por el servicio, después de aplicar descuentos o anulaciones. | `CHECK (monto_pagado >= 0.00)`. | 🛡️ **Auditoría Clave.** Este es el valor real de la transacción, que puede diferir del `monto_pactado` original. |
 | `estado_asistencia_registrado` | `VARCHAR` | `NULLABLE` | Copia del estado de asistencia (`PUNTUAL`, `TARDANZA`, `AUSENTE`) en el momento del pago. | - | Preserva el contexto del pago para auditorías futuras. |
 | `descuento_aplicado_pct` | `DECIMAL` | `NULLABLE` | Porcentaje de descuento aplicado en caso de `TARDANZA`. | `CHECK (descuento_aplicado_pct >= 0 AND descuento_aplicado_pct <= 100)`. | Almacena el `%` exacto para total transparencia en el reporte. |
+---
+## Vistas de Base de Datos (Optimizaciones)
+
+### Vista: `reporte_participacion_flat`
+Esta vista se creó para aplanar la estructura de datos compleja relacionada con la participación del personal en los eventos. Simplifica las consultas para los reportes, evitando errores de ordenamiento en relaciones anidadas y mejorando el rendimiento.
+
+| Columna | Tipo de Dato | Descripción Detallada |
+| :--- | :--- | :--- |
+| `id_personal_participante` | `INTEGER` | ID del miembro del personal que participa. |
+| `estado_asistencia` | `VARCHAR` | El estado de asistencia registrado (`PUNTUAL`, `TARDANZA`, etc.). |
+| `id_contrato` | `INTEGER` | ID del contrato al que pertenece el evento. |
+| `fecha_hora_evento` | `TIMESTAMP` | Fecha y hora del evento del contrato. |
+| `id_organizacion` | `INTEGER` | ID de la organización a la que pertenece el registro. |
+| `tipo_contrato_nombre` | `VARCHAR` | Nombre del tipo de contrato. |
+| `servicio_nombre` | `VARCHAR` | Nombre del servicio realizado. |
+| `monto_pactado` | `DECIMAL` | Monto que se acordó pagar por el servicio. |
+
 ---
 ## Modelo de Plataforma y Flujo de Trabajo (v2.0 - Autoservicio)
 
@@ -457,4 +474,83 @@ Esta sección documenta las funcionalidades implementadas y las decisiones técn
     *   **Navegación Centralizada:** Se creó una página principal de reportes (`/dashboard/reportes`) para servir como un hub central para todos los futuros reportes, mejorando la organización y escalabilidad del módulo.
     *   **Mejora de la Integridad de Datos (Auditoría):** Se tomó la decisión crítica de modificar la estructura de la base de datos para garantizar la precisión contable. Se añadieron las columnas `monto_pagado`, `estado_asistencia_registrado` y `descuento_aplicado_pct` a la tabla `Detalles_Lote_Pago`. Esto asegura que cada transacción de pago se registre con todos los detalles relevantes en el momento exacto de la liquidación, haciendo los reportes históricos 100% fiables e inmunes a cambios futuros en los datos de origen (como el estado de asistencia o los montos base de los servicios).
     *   **Corrección de Errores en Cascada:** La implementación inicial del reporte reveló una discrepancia en los montos. Esto llevó a la refactorización de la lógica de creación de lotes de pago para que almacenara los montos finales calculados y los detalles de asistencia, y posteriormente se actualizó el componente del reporte para que leyera y mostrara esta nueva información precisa.
-    *   **Experiencia de Usuario en Reportes:** La interfaz del reporte se diseñó para ser clara y funcional, con filtros fáciles de usar y una presentación de datos que prioriza la legibilidad y la información clave para la auditoría de pagos.
+        *   **Experiencia de Usuario en Reportes:** La interfaz del reporte se diseñó para ser clara y funcional, con filtros fáciles de usar y una presentación de datos que prioriza la legibilidad y la información clave para la auditoría de pagos.
+
+### 13. **Reporte de Participación y Resumen de Asistencia (HU-13)**
+*   **Funcionalidad:** Se ha implementado el reporte de participación del personal, accesible desde la página principal de reportes.
+    *   La página (`/dashboard/reportes/participacion-personal`) permite filtrar por miembro del personal y un rango de fechas.
+    *   Muestra un listado de todos los contratos en los que ha participado el empleado, detallando los servicios específicos que realizó en cada uno.
+    *   Se añadió una sección de **resumen de asistencia** en la parte superior del reporte, que muestra un conteo total de las participaciones `PUNTUALES`, con `TARDANZA` y `AUSENTES` para el período seleccionado, ofreciendo una visión rápida del rendimiento.
+*   **Decisiones de Implementación:**
+    *   **Creación de Vista en BD para Fiabilidad:** Durante la implementación, se encontró un error que impedía ordenar los resultados por la fecha del evento debido a la complejidad de las relaciones. Para solucionarlo de raíz, se creó una **vista de PostgreSQL (`reporte_participacion_flat`)** mediante una migración. Esta vista pre-une las tablas necesarias, simplificando drásticamente la consulta en el frontend, eliminando el error y mejorando el rendimiento.
+    *   **Cálculo de Resumen en Frontend:** El resumen de asistencias se calcula dinámicamente en el lado del cliente después de recibir los datos de la consulta, lo que mantiene la lógica de la interfaz contenida en el componente.
+    *   **Consistencia de la Interfaz:** Se siguió el diseño y la estructura del reporte de pagos existente para mantener una experiencia de usuario coherente en todo el módulo de reportes.
+
+### 14. **Restauración y Mejora de la Gestión de Pagos**
+*   **Funcionalidad:** Se restauró la vista de pagos pendientes y se mejoró la navegación y visualización de los lotes de pago.
+    *   La página `/dashboard/pagos` ahora muestra la lista de servicios pendientes de pago, agrupados por personal.
+    *   Se creó una nueva pestaña "Gestionar Lotes" (`/dashboard/pagos/gestion`) para visualizar los lotes de pago creados, incluyendo los pendientes de aprobación y los reclamados.
+    *   Se actualizó la navegación en `/dashboard/pagos/layout.tsx` para incluir pestañas claras entre "Pagos Pendientes" y "Gestionar Lotes".
+*   **Decisiones de Implementación:**
+    *   **Clarificación de Navegación:** Se renombró la etiqueta de navegación de "Crear Lote de Pago" a "Pagos Pendientes" en el layout de pagos para mayor claridad.
+    *   **Resolución de Ambigüedad en Consultas:** Se corrigió un error de Supabase en `app/dashboard/pagos/gestion/page.tsx` que impedía la correcta visualización de los lotes. El error "Could not embed because more than one relationship was found" se resolvió especificando explícitamente la clave foránea en la consulta (`Personal!Lotes_Pago_id_personal_fkey(id, nombre)`), asegurando que la relación correcta entre `Lotes_Pago` y `Personal` fuera utilizada.
+
+### 15. **Reporte de Rentabilidad con Desglose Detallado (HU-14)**
+*   **Funcionalidad:** Se implementó el reporte de rentabilidad, accesible desde `/dashboard/reportes/rentabilidad-contrato`.
+    *   Permite a los administradores filtrar por uno o varios `Tipos de Contrato` y un rango de fechas.
+    *   Calcula y muestra tarjetas de resumen con **Ingreso Total**, **Costo Total** e **Ingreso Neto** para cada tipo de contrato seleccionado.
+    *   Se añadió una funcionalidad de **desglose detallado**: cada tarjeta de resumen tiene un botón para mostrar/ocultar dos tablas con los datos de origen.
+        *   **Desglose de Ingresos:** Muestra cada contrato individual que contribuye al ingreso, con el nombre del contratador, la fecha y hora del evento, y un enlace directo a la página de ese contrato.
+        *   **Desglose de Costos:** Muestra cada servicio pagado que contribuye al costo, con el nombre del personal que lo realizó, el nombre del servicio, la fecha y hora del evento, y un enlace al contrato correspondiente.
+    *   Los datos en las tablas de desglose están ordenados cronológicamente por la fecha del evento para facilitar el análisis.
+*   **Decisiones de Implementación:**
+    *   **Consultas Enriquecidas:** Se ajustaron las consultas a la base de datos para traer no solo los montos, sino también los datos relacionados necesarios para el desglose (nombres de contratadores, personal, servicios, etc.).
+    *   **Agregación en el Frontend:** La lógica para agrupar los datos por tipo de contrato y calcular los totales y el ingreso neto se maneja en el lado del cliente, después de recibir la información de la base de datos.
+    *   **UI Interactiva con Estado Local:** Se utilizó el estado de React (`useState`) para gestionar qué tarjeta de desglose está expandida, permitiendo una experiencia de usuario fluida sin recargar la página.
+
+### 16. **Exportación de Reportes a Excel (HU-15)**
+*   **Funcionalidad:** Se ha añadido un botón de "Exportar a Excel" en los tres reportes implementados (Pagos por Personal, Participación por Personal y Rentabilidad).
+    *   Al hacer clic, se genera y descarga un archivo `.xlsx` con los datos actualmente visibles en el reporte.
+    *   Para el reporte de rentabilidad, cada tipo de contrato se exporta a una **hoja de cálculo separada** dentro del mismo archivo, mejorando la organización y el análisis de los datos.
+*   **Decisiones de Implementación:**
+    *   **Librería `xlsx`:** Se instaló la librería `xlsx` para manejar la creación de los archivos de Excel. Esta es una solución robusta y estándar para la manipulación de hojas de cálculo en JavaScript.
+    *   **Generación en el Cliente:** Toda la lógica de formateo de datos y generación de archivos se ejecuta directamente en el navegador del usuario (lado del cliente), evitando la necesidad de un backend para esta tarea.
+    *   **Formateo de Datos:** Se implementó una lógica específica para cada reporte que transforma los datos desde la estructura de estado de React a un formato de array de objetos compatible con la librería `xlsx`, asegurando que las columnas y filas del Excel sean claras y legibles.
+
+
+---
+
+# Bitácora de Implementación (v1.2 - Flujo de Aprobación y Registro Robusto)
+
+Esta sección documenta la implementación de un nuevo flujo de trabajo donde el personal debe aprobar los pagos y un sistema de registro de personal rediseñado para ser más seguro y funcional.
+
+### 1. **Modificación del Flujo de Pagos (HU-11 Modificada)**
+*   **Funcionalidad:** Se introdujo un flujo de aprobación para los lotes de pago, dando control al personal sobre la confirmación de sus ingresos.
+    *   Los lotes de pago ahora se crean con un estado inicial de `PENDIENTE_APROBACION`.
+    *   Los servicios incluidos en un lote se marcan como `EN_LOTE` para sacarlos de la lista de pendientes sin marcarlos prematuramente como pagados.
+    *   Se creó una nueva página (`/dashboard/mis-pagos`) para que el personal con rol `OPERATIVO` pueda ver sus lotes pendientes.
+    *   En esta página, el personal puede "Aceptar" (cambia el estado a `PAGADO`) o "Reclamar" (cambia el estado a `RECLAMADO`) un lote.
+*   **Decisiones de Implementación:**
+    *   **Ampliación de ENUMs:** Se modificaron los tipos `ENUM` en la base de datos para las columnas `Lotes_Pago.estado` y `Evento_Servicios_Asignados.estado_pago` para reflejar el nuevo ciclo de vida de los pagos.
+    *   **Navegación por Roles:** Se actualizó el componente `Sidebar` para detectar el rol del usuario (`ADMINISTRATIVO` vs. `OPERATIVO`) y mostrar un menú de navegación diferente y adecuado para cada uno.
+
+### 2. **Rediseño del Sistema de Registro de Personal (HU-02 Modificada)**
+*   **Problema Inicial:** El sistema de invitación por correo electrónico a través de una Edge Function resultó problemático y difícil de depurar, presentando errores recurrentes de permisos y configuración (CORS, variables de entorno, etc.) que impedían su funcionamiento.
+*   **Solución Implementada (Pivote Estratégico):** Se abandonó por completo el enfoque de la Edge Function en favor de un sistema de registro más robusto, seguro y controlable, basado en un enlace de invitación y un trigger de base de datos.
+*   **Funcionalidad Final:**
+    1.  **Generación de Enlace:** En la página de "Gestión de Personal", el administrador ahora hace clic en un botón "Generar Enlace" para el personal no registrado. Esto crea un enlace único y seguro a la página de registro de operativos.
+    2.  **URL Parametrizada:** El enlace incluye el `id_organizacion` como un parámetro en la URL (ej. `/auth/register-operative?org_id=123`). El administrador copia y comparte este enlace con el empleado.
+    3.  **Registro Dirigido:** El empleado accede a la página de registro, que lee el `id_organizacion` de la URL. Al registrarse, el sistema valida que su email pertenezca a un empleado de esa organización específica.
+    4.  **Vinculación por Trigger de Base de Datos:** Se creó una función (`handle_new_user`) y un trigger (`on_auth_user_created`) directamente en la base de datos de Supabase. Este mecanismo se activa automáticamente cada vez que un nuevo usuario se registra con éxito. La función busca el email del nuevo usuario en la tabla `Personal` y vincula de forma atómica y segura el `id` del usuario de `auth` con el registro de `Personal`, resolviendo los problemas de permisos que bloqueaban la implementación anterior.
+*   **Decisiones de Implementación Clave:**
+    *   **Eliminación de la Edge Function:** Se descartó el uso de `supabase.functions.invoke('invite-user')` para eliminar un punto de fallo complejo y poco transparente.
+    *   **Lógica en el Backend (Trigger):** Se movió la responsabilidad crítica de la vinculación de cuentas del frontend (propenso a errores de permisos) al backend de la base de datos. Esta es una práctica recomendada por ser más segura y transaccional.
+    *   **Experiencia de Usuario Mejorada:** El flujo para el administrador y el empleado es ahora más claro. El admin comparte un enlace y el empleado se registra en una página diseñada específicamente para él, sin necesidad de manejar tokens de invitación complejos.
+
+### 3. **Corrección de Constraints en Base de Datos**
+*   **Problema:** Al crear un lote de pago, la aplicación fallaba con un error de `violates check constraint`. Esto se debía a que la lógica de la aplicación intentaba insertar nuevos estados (ej. `PENDIENTE_APROBACION`) que no estaban permitidos por las reglas (`CHECK`) de la base de datos.
+*   **Proceso de Depuración:**
+    1.  **Hipótesis Incorrecta (ENUMs):** Inicialmente, se asumió erróneamente que las columnas de estado usaban un tipo de dato `ENUM` de PostgreSQL. Los intentos de modificar un `ENUM` inexistente fallaron, lo que demostró que la hipótesis era incorrecta.
+    2.  **Diagnóstico Correcto (Inspección de Esquema):** Se ejecutó una consulta `information_schema` para inspeccionar la estructura real de las tablas. Esta consulta reveló que las columnas de estado eran de tipo `VARCHAR` y estaban restringidas por `CHECK constraints`.
+*   **Solución Implementada:**
+    *   **Migración de Constraints:** Se ejecutó una migración de base de datos para `DROP` (eliminar) los `CHECK constraints` antiguos y `ADD` (añadir) unos nuevos y actualizados en las tablas `Lotes_Pago` y `Evento_Servicios_Asignados`. Los nuevos constraints ahora incluyen todos los valores de estado requeridos por el nuevo flujo de aprobación (`PENDIENTE_APROBACION`, `EN_LOTE`, etc.), solucionando el error de forma definitiva.

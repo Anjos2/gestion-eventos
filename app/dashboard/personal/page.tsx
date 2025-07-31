@@ -11,6 +11,8 @@ interface Personal {
   email: string | null;
   rol: string;
   es_activo: boolean;
+  supabase_user_id: string | null;
+  id_organizacion: number | null;
 }
 
 // Componente para el formulario de añadir personal
@@ -67,7 +69,7 @@ const AddPersonalForm = ({ onAddPersonal }: { onAddPersonal: (name: string, emai
 };
 
 // Componente para la tabla de personal
-const PersonalTable = ({ personal, onToggleStatus }: { personal: Personal[], onToggleStatus: (id: number, currentStatus: boolean) => void }) => (
+const PersonalTable = ({ personal, onToggleStatus, onGenerateInviteLink }: { personal: Personal[], onToggleStatus: (id: number, currentStatus: boolean) => void, onGenerateInviteLink: (orgId: number) => void }) => (
   <div className="bg-slate-800 rounded-xl shadow-lg overflow-hidden border border-slate-700">
     <table className="min-w-full divide-y divide-slate-700">
       <thead className="bg-slate-900">
@@ -76,6 +78,7 @@ const PersonalTable = ({ personal, onToggleStatus }: { personal: Personal[], onT
           <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase tracking-wider">Email</th>
           <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase tracking-wider">Rol</th>
           <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase tracking-wider">Estado</th>
+          <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase tracking-wider">Usuario</th>
           <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase tracking-wider">Acciones</th>
         </tr>
       </thead>
@@ -95,6 +98,18 @@ const PersonalTable = ({ personal, onToggleStatus }: { personal: Personal[], onT
                   {p.es_activo ? 'Activo' : 'Inactivo'}
                 </span>
               </td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm">
+                {p.supabase_user_id ? (
+                  <span className="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-900 text-blue-200">Registrado</span>
+                ) : (
+                  <button 
+                    onClick={() => onGenerateInviteLink(p.id_organizacion!)}
+                    className="text-teal-400 hover:text-teal-300 transition-colors"
+                  >
+                    Generar Enlace
+                  </button>
+                )}
+              </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                 <button 
                   onClick={() => onToggleStatus(p.id, p.es_activo)}
@@ -107,7 +122,7 @@ const PersonalTable = ({ personal, onToggleStatus }: { personal: Personal[], onT
           ))
         ) : (
           <tr>
-            <td colSpan={5} className="text-center py-10 text-slate-400">
+            <td colSpan={6} className="text-center py-10 text-slate-400">
               No hay personal registrado todavía.
             </td>
           </tr>
@@ -196,6 +211,15 @@ export default function PersonalPage() {
     }
   };
 
+  const handleGenerateInviteLink = (orgId: number) => {
+    if (!orgId) {
+      alert('Error: No se pudo determinar la organización.');
+      return;
+    }
+    const inviteLink = `${window.location.origin}/auth/register-operative?org_id=${orgId}`;
+    window.prompt("Copia este enlace y envíalo al nuevo miembro del personal:", inviteLink);
+  };
+
   const handleToggleStatus = async (id: number, currentStatus: boolean) => {
     try {
       const { data, error } = await supabase
@@ -223,7 +247,7 @@ export default function PersonalPage() {
     <div>
       <h1 className="text-3xl font-bold text-white mb-6">Gestión de Personal</h1>
       <AddPersonalForm onAddPersonal={handleAddPersonal} />
-      <PersonalTable personal={personal} onToggleStatus={handleToggleStatus} />
+      <PersonalTable personal={personal} onToggleStatus={handleToggleStatus} onGenerateInviteLink={handleGenerateInviteLink} />
     </div>
   );
 }

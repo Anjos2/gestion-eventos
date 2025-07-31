@@ -9,6 +9,16 @@ const reportes = [
     description: 'Consulta todos los lotes de pago emitidos a un miembro del personal en un rango de fechas específico.',
     href: '/dashboard/reportes/pagos-personal',
   },
+  {
+    title: 'Reporte de Participación por Personal',
+    description: 'Revisa el historial de participación de un empleado, incluyendo los servicios realizados y su asistencia.',
+    href: '/dashboard/reportes/participacion-personal',
+  },
+  {
+    title: 'Reporte de Rentabilidad por Tipo de Contrato',
+    description: 'Analiza la rentabilidad de diferentes tipos de contrato, comparando ingresos y costos.',
+    href: '/dashboard/reportes/rentabilidad-contrato',
+  },
   // ... más reportes aquí
 ];
 

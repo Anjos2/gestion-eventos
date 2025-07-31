@@ -70,6 +70,13 @@ export default function PagosPage() {
 
       if (pagosError) throw new Error(pagosError.message);
 
+      // Ordenar los pagos por fecha de evento (más antiguo primero)
+      pagosPendientes.sort((a, b) => {
+        const fechaA = new Date(a.Participaciones_Personal?.Eventos_Contrato?.Contratos?.fecha_hora_evento || 0).getTime();
+        const fechaB = new Date(b.Participaciones_Personal?.Eventos_Contrato?.Contratos?.fecha_hora_evento || 0).getTime();
+        return fechaA - fechaB;
+      });
+
       const agrupados: Record<number, PersonalConPendientes> = {};
 
       pagosPendientes.forEach(pago => {
@@ -190,7 +197,7 @@ export default function PagosPage() {
           id_personal_administrativo,
           monto_total,
           fecha_pago: new Date().toISOString().slice(0, 10),
-          estado: 'COMPLETADO',
+          estado: 'PENDIENTE_APROBACION',
           created_by: id_personal_administrativo,
         })
         .select('id')
@@ -213,12 +220,12 @@ export default function PagosPage() {
 
       const { error: updateError } = await supabase
         .from('Evento_Servicios_Asignados')
-        .update({ estado_pago: 'PAGADO' })
+        .update({ estado_pago: 'EN_LOTE' })
         .in('id', selectedForPerson);
 
       if (updateError) throw new Error(`Error al actualizar el estado de los servicios: ${updateError.message}`);
 
-      alert(`¡Lote de pago creado exitosamente para ${personal.nombre_personal}!`);
+      alert(`¡Lote de pago enviado a aprobación para ${personal.nombre_personal}!`);
       fetchPagosPendientes(); // Re-fetch data to update the list
       setSelectedServices(prev => {
         const newSelections = { ...prev };
@@ -372,7 +379,7 @@ export default function PagosPage() {
               <>
                 <FiSearch className="mx-auto text-6xl text-slate-500 mb-4" />
                 <h2 className="text-2xl font-bold text-white">No se encontraron resultados</h2>
-                <p className="text-slate-400 mt-2">No hay personal que coincida con \"{searchTerm}\".</p>
+                <p className="text-slate-400 mt-2">No hay personal que coincida con "{searchTerm}".</p>
               </>
             ) : (
               <>

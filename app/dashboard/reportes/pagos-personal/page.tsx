@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/app/lib/supabase';
-import { FiSearch } from 'react-icons/fi';
+import { FiSearch, FiDownload } from 'react-icons/fi';
+import * as XLSX from 'xlsx';
 
 // Tipos de datos
 interface Personal {
@@ -88,6 +89,7 @@ export default function PagosPersonalReportePage() {
         )
       `)
       .eq('id_personal', selectedPersonal)
+      .eq('estado', 'PAGADO') // <-- AÑADIDO: Filtra solo lotes pagados
       .gte('fecha_pago', startDate)
       .lte('fecha_pago', endDate)
       .order('fecha_pago', { ascending: false });
@@ -98,6 +100,33 @@ export default function PagosPersonalReportePage() {
       setReportData(data || []);
     }
     setLoading(false);
+  };
+
+  const handleExport = () => {
+    if (reportData.length === 0) {
+      alert("No hay datos para exportar.");
+      return;
+    }
+
+    const dataToExport = reportData.flatMap(lote => 
+      lote.Detalles_Lote_Pago.map(detalle => ({
+        'Lote ID': lote.id,
+        'Fecha de Pago': new Date(lote.fecha_pago + 'T00:00:00').toLocaleDateString(),
+        'Monto Total del Lote': lote.monto_total,
+        'Servicio Pagado': detalle.Evento_Servicios_Asignados.Servicios.nombre,
+        'Monto Pagado por Servicio': detalle.monto_pagado,
+        'Asistencia': detalle.estado_asistencia_registrado,
+        'Descuento (%)': detalle.descuento_aplicado_pct,
+      }))
+    );
+
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Pagos");
+
+    // Buffer
+    XLSX.writeFile(workbook, "ReportePagosPersonal.xlsx");
+
   };
 
   return (
@@ -151,6 +180,18 @@ export default function PagosPersonalReportePage() {
         </div>
         {error && <p className="text-red-400 mt-4">{error}</p>}
       </div>
+
+      {/* Results Header */}
+      {reportData.length > 0 && (
+        <div className="flex justify-between items-center mb-4">
+            <h2 className="text-2xl font-bold text-white">Resultados</h2>
+            <button 
+                onClick={handleExport}
+                className="flex items-center bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-colors duration-200">
+                <FiDownload className="mr-2"/> Exportar a Excel
+            </button>
+        </div>
+      )}
 
       {/* Results */}
       <div className="space-y-6">

@@ -1,8 +1,16 @@
+'use client';
+
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { FiHome, FiUsers, FiBriefcase, FiFileText, FiTool, FiClipboard, FiCreditCard, FiBarChart2 } from 'react-icons/fi';
+import { useEffect, useState } from 'react';
+import { supabase } from '@/app/lib/supabase';
+import { FiHome, FiUsers, FiBriefcase, FiFileText, FiTool, FiClipboard, FiCreditCard, FiBarChart2, FiDollarSign } from 'react-icons/fi';
 
-const navItems = [
+// Define los roles
+type UserRole = 'ADMINISTRATIVO' | 'OPERATIVO' | null;
+
+// Define los items de navegación para cada rol
+const navItemsAdmin = [
   { href: '/dashboard', label: 'Dashboard', icon: <FiHome /> },
   { href: '/dashboard/personal', label: 'Personal', icon: <FiUsers /> },
   { href: '/dashboard/contratadores', label: 'Contratadores', icon: <FiBriefcase /> },
@@ -13,8 +21,62 @@ const navItems = [
   { href: '/dashboard/reportes', label: 'Reportes', icon: <FiBarChart2 /> },
 ];
 
+const navItemsOperativo = [
+  { href: '/dashboard', label: 'Dashboard', icon: <FiHome /> },
+  { href: '/dashboard/mis-pagos', label: 'Mis Pagos', icon: <FiDollarSign /> },
+];
+
 export default function Sidebar() {
   const pathname = usePathname();
+  const [userRole, setUserRole] = useState<UserRole>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchUserRole = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: personal, error } = await supabase
+            .from('Personal')
+            .select('rol')
+            .eq('supabase_user_id', user.id)
+            .single();
+
+          if (error) throw new Error('No se pudo obtener el rol del usuario.');
+          if (personal) {
+            setUserRole(personal.rol as UserRole);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching user role:", error);
+        // Mantener el rol como null para no mostrar items
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserRole();
+  }, []);
+
+  const navItems = userRole === 'ADMINISTRATIVO' ? navItemsAdmin : navItemsOperativo;
+
+  if (loading) {
+    return (
+      <aside className="w-64 h-screen bg-slate-900 text-slate-300 flex flex-col border-r border-slate-800">
+        <div className="p-6 text-center">
+          <h1 className="text-3xl font-bold text-white tracking-wider">GestiónApp</h1>
+        </div>
+        <div className="flex-1 px-4 py-4">
+          {/* Skeleton loading state */}
+          <div className="space-y-2">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="h-12 bg-slate-800 rounded-lg animate-pulse"></div>
+            ))}
+          </div>
+        </div>
+      </aside>
+    );
+  }
 
   return (
     <aside className="w-64 h-screen bg-slate-900 text-slate-300 flex flex-col border-r border-slate-800">

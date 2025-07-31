@@ -119,12 +119,20 @@ export default function RegisterPage() {
             </button>
           </div>
         </form>
-        <p className="text-sm text-center text-slate-400">
-          ¿Ya tienes una cuenta?{' '}
-          <Link href="/auth/login" className="font-medium text-sky-400 hover:text-sky-300">
-            Inicia sesión aquí
-          </Link>
-        </p>
+        <div className="text-center text-sm text-slate-400 space-y-2 mt-4">
+          <p>
+            ¿Ya tienes una cuenta?{' '}
+            <Link href="/auth/login" className="font-medium text-sky-400 hover:text-sky-300">
+              Inicia sesión aquí
+            </Link>
+          </p>
+          <p>
+            ¿Eres personal de una organización existente?{' '}
+            <Link href="/auth/register-operative" className="font-medium text-teal-400 hover:text-teal-300">
+              Regístrate como Personal Operativo
+            </Link>
+          </p>
+        </div>
       </div>
     </div>
   );
