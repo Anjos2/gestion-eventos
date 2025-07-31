@@ -120,6 +120,10 @@ const ContratosTable = ({ contratos }: { contratos: Contrato[] }) => (
   </div>
 );
 
+import Pagination from '@/app/components/ui/Pagination';
+
+// ... (interfaces sin cambios)
+
 // Componente principal
 export default function ContratosPage() {
   const [user, setUser] = useState<User | null>(null);
@@ -129,12 +133,21 @@ export default function ContratosPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchContratos = useCallback(async (orgId: number) => {
-    const { data, error } = await supabase
+  // Estado para la paginación
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const ITEMS_PER_PAGE = 10;
+
+  const fetchContratos = useCallback(async (orgId: number, page: number) => {
+    const from = (page - 1) * ITEMS_PER_PAGE;
+    const to = from + ITEMS_PER_PAGE - 1;
+
+    const { data, error, count } = await supabase
       .from('Contratos')
-      .select(`*, Contratadores(nombre), Tipos_Contrato(nombre), Personal!id_personal_administrativo(nombre)`)
+      .select(`*, Contratadores(nombre), Tipos_Contrato(nombre), Personal!id_personal_administrativo(nombre)`, { count: 'exact' })
       .eq('id_organizacion', orgId)
-      .order('id', { ascending: false });
+      .order('id', { ascending: false })
+      .range(from, to);
 
     if (error) {
       console.error('Error fetching contratos:', error);
@@ -142,12 +155,14 @@ export default function ContratosPage() {
       setContratos([]);
     } else {
       setContratos(data || []);
+      setTotalCount(count || 0);
     }
   }, []);
 
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
+        setLoading(true);
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error('Usuario no autenticado');
         setUser(user);
@@ -166,7 +181,7 @@ export default function ContratosPage() {
 
         setContratadores(contratadoresRes.data || []);
         setTiposContrato(tiposContratoRes.data || []);
-        fetchContratos(orgId);
+        fetchContratos(orgId, currentPage);
 
       } catch (err: any) {
         setError(err.message);
@@ -175,7 +190,7 @@ export default function ContratosPage() {
       }
     };
     fetchInitialData();
-  }, [fetchContratos]);
+  }, [fetchContratos, currentPage]);
 
   const handleAddContrato = async (contratoData: Omit<Contrato, 'id' | 'estado' | 'estado_asignacion' | 'Contratadores' | 'Tipos_Contrato' | 'Personal'> & { id_contratador: number; id_tipo_contrato: number }) => {
     if (!user) return;
@@ -205,11 +220,20 @@ export default function ContratosPage() {
         throw eventoError;
       }
 
-      fetchContratos(adminData.id_organizacion);
+      if (currentPage !== 1) {
+        setCurrentPage(1);
+      } else {
+        fetchContratos(adminData.id_organizacion, 1);
+      }
+
       alert('Contrato y evento registrados con éxito!');
     } catch (err: any) {
       alert(`Error al registrar el contrato: ${err.message}`);
     }
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
   };
 
   if (loading) return <p>Cargando...</p>;
@@ -220,6 +244,12 @@ export default function ContratosPage() {
       <h1 className="text-3xl font-bold text-white mb-6">Gestión de Contratos</h1>
       <AddContratoForm contratadores={contratadores} tiposContrato={tiposContrato} onAddContrato={handleAddContrato} />
       <ContratosTable contratos={contratos} />
+      <Pagination 
+        currentPage={currentPage} 
+        totalCount={totalCount} 
+        itemsPerPage={ITEMS_PER_PAGE} 
+        onPageChange={handlePageChange} 
+      />
     </div>
   );
 }

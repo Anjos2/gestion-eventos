@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/app/lib/supabase';
-import { FiHome, FiUsers, FiBriefcase, FiFileText, FiTool, FiClipboard, FiCreditCard, FiBarChart2, FiDollarSign, FiShield } from 'react-icons/fi';
+import { FiHome, FiUsers, FiBriefcase, FiFileText, FiTool, FiClipboard, FiCreditCard, FiBarChart2, FiDollarSign, FiShield, FiCalendar } from 'react-icons/fi';
 
 // Define los items de navegación para cada rol
 const navItemsAdmin = [
@@ -20,6 +20,7 @@ const navItemsAdmin = [
 
 const navItemsOperativo = [
   { href: '/dashboard', label: 'Resumen', icon: <FiHome /> },
+  { href: '/dashboard/mis-participaciones', label: 'Mis Asistencias', icon: <FiCalendar /> },
   { href: '/dashboard/mis-pagos', label: 'Mis Pagos', icon: <FiDollarSign /> },
 ];
 

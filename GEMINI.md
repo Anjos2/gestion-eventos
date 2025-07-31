@@ -42,7 +42,7 @@ Las inserciones (`INSERT`) en **TODAS** las tablas de esta sección incrementan 
 | `id_organizacion` | `INTEGER` | FK (`Organizaciones.id`) | Campo no nulo que asegura que todo miembro del personal pertenezca a una y solo una organización. | Debe ser un ID de organización existente y válido. | **Pilar del multi-tenancy.** 📈 **Contabilizado.** Cada `INSERT` incrementa el contador de uso. |
 | `nombre` | `VARCHAR` | `NOT NULL` | Nombre completo del miembro del personal. Se utiliza para visualización en reportes, listas y asignaciones. | La longitud debe ser mayor a 2 caracteres. No puede contener solo espacios en blanco. | - |
 | `email` | `VARCHAR` | `UNIQUE`, `NULL` | Correo electrónico del miembro del personal. Es el identificador principal para el inicio de sesión en Supabase. | Si no es `NULL`, debe tener un formato de email válido (ej. `usuario<!-- Import failed: dominio.com`). - Only .md files are supported --> | Debe ser `NULLABLE`. El constraint `UNIQUE` en PostgreSQL se aplicará solo a los valores que no sean nulos, lo cual es el comportamiento deseado. |
-| `rol` | `VARCHAR` | `ENUM` | Etiqueta que define el nivel de permisos del usuario (`Administrativo`) o la función laboral del empleado (`Operativo`). | El valor debe pertenecer a una lista predefinida (`ADMINISTRATIVO`, `OPERATIVO`). | Es recomendable usar un tipo `ENUM` de PostgreSQL para restringir los valores a un conjunto predefinido y evitar inconsistencias. |
+| `rol` | `VARCHAR` | `ENUM` | Etiqueta que define el nivel de permisos del usuario (`Administrativo`, `Administrativo de Apoyo`) o la función laboral del empleado (`Operativo`). | El valor debe pertenecer a una lista predefinida (`ADMINISTRATIVO`, `OPERATIVO`, `ADMINISTRATIVO_APOYO`). | Es recomendable usar un tipo `ENUM` de PostgreSQL para restringir los valores a un conjunto predefinido y evitar inconsistencias. |
 | `es_activo` | `BOOLEAN` | `NOT NULL` | Indicador booleano que permite la desactivación (soft-delete) de un empleado sin borrar su registro. | El valor debe ser `TRUE` o `FALSE`. | Las consultas operativas siempre deben incluir la cláusula `WHERE es_activo = TRUE` para mostrar solo al personal relevante. |
 
 ---
@@ -608,3 +608,36 @@ Esta sección documenta la implementación del panel de control para el Super-Ad
 *   **Decisiones de Implementación Clave:**
     *   **Priorización de la Robustez:** Se eligió un enfoque de frontend explícito sobre un trigger de backend implícito para garantizar la fiabilidad del flujo de registro, que es crítico para la aplicación.
     *   **Manejo de Errores Mejorado:** Al tener la lógica en el frontend, cualquier error en la vinculación ahora se puede capturar y mostrar al usuario directamente, evitando cuentas en estado inconsistente.
+
+---
+
+# Bitácora de Implementación (v1.4 - Mejoras de UX y Paginación)
+
+Esta versión se centra en mejorar la experiencia de usuario para el rol `OPERATIVO` y en optimizar el rendimiento de la aplicación mediante la introducción de paginación en vistas con alta densidad de datos.
+
+### 1. **Dashboard Personalizado para Operativos (HU-16)**
+*   **Funcionalidad:** Se ha rediseñado la página de "Resumen" (`/dashboard`) para que sea sensible al rol del usuario.
+    *   **Vista para Administradores:** Los roles `ADMINISTRATIVO` y `ADMINISTRATIVO_APOYO` continúan viendo las tarjetas de KPI orientadas a la gestión (contratos por confirmar, pagos pendientes, etc.).
+    *   **Nueva Vista para Operativos:** Cuando un usuario con rol `OPERATIVO` inicia sesión, ahora ve un dashboard personalizado con sus propias métricas de desempeño:
+        1.  Total de Asistencias `PUNTUALES`.
+        2.  Total de Asistencias con `TARDANZA`.
+        3.  Total de `AUSENCIAS`.
+*   **Decisiones de Implementación:**
+    *   **Lógica Condicional en el Componente:** Se modificó el componente de la página `/dashboard/page.tsx` para que primero detecte el rol del usuario y, en función de este, obtenga y muestre los datos y las tarjetas de estadísticas correspondientes.
+
+### 2. **Nuevo Reporte de "Mis Asistencias" para Operativos (HU-16)**
+*   **Funcionalidad:** Se ha creado una nueva sección (`/dashboard/mis-participaciones`) exclusiva para el personal operativo.
+    *   La página permite al usuario filtrar sus participaciones en eventos por un rango de fechas.
+    *   Muestra un listado detallado de cada evento, incluyendo el tipo de contrato, el servicio específico que realizó, el estado de su asistencia y el monto que se le debía pagar.
+*   **Decisiones de Implementación:**
+    *   **Reutilización de Vista de BD:** Para optimizar la consulta, el reporte utiliza la vista de base de datos `reporte_participacion_flat` existente, que proporciona los datos ya aplanados y listos para consumir.
+    *   **Navegación Actualizada:** Se añadió un enlace "Mis Asistencias" en el `Sidebar` para que los usuarios operativos puedan acceder fácilmente a su nuevo reporte.
+
+### 3. **Implementación de Paginación Reutilizable**
+*   **Funcionalidad:** Se ha añadido paginación a la página de "Gestión de Contratos" para mejorar el rendimiento y la usabilidad.
+    *   La tabla de contratos ahora muestra los registros en lotes de 10.
+    *   Se muestran controles para navegar entre las páginas, junto con un contador del total de registros.
+*   **Decisiones de Implementación:**
+    *   **Componente `Pagination.tsx` Reutilizable:** Se creó un componente de paginación genérico y reutilizable en `app/components/ui/Pagination.tsx`. Este componente maneja la lógica de la interfaz y emite eventos de cambio de página.
+    *   **Carga de Datos Paginada:** La función `fetchContratos` en la página de contratos se modificó para usar el método `.range()` de Supabase, solicitando únicamente los datos de la página actual.
+    *   **Manejo de Estado:** Se implementó el estado necesario en la página de contratos para gestionar la página actual y el conteo total de registros, asegurando que la interfaz se actualice correctamente al navegar.
