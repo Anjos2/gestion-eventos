@@ -568,3 +568,43 @@ Esta sección documenta la implementación de un nuevo flujo de trabajo donde el
     *   **Creación de Vista en BD:** Para solucionar un error de consulta compleja (similar a uno anterior), se creó una nueva vista de base de datos (`dashboard_pagos_pendientes_flat`), demostrando un enfoque robusto y reutilizable para la obtención de datos aplanados.
     *   **Personalización del Sidebar:** Se modificó el componente `app/components/ui/sidebar.tsx` para que, al iniciar sesión, obtenga tanto el rol del usuario como el nombre de su organización, almacenándolos en el estado para personalizar la UI dinámicamente.
     *   **Componente Reutilizable:** Se diseñó un componente `DashboardCard` para las tarjetas de KPI, asegurando la consistencia visual y facilitando la adición de nuevas métricas en el futuro.
+
+---
+
+# Bitácora de Implementación (v1.3 - Módulo de Super-Admin y Roles Avanzados)
+
+Esta sección documenta la implementación del panel de control para el Super-Administrador, la introducción de roles de personal con permisos diferenciados y la refactorización crítica del sistema de registro de usuarios para mejorar su robustez.
+
+### 1. **Implementación del Panel de Super-Administrador (Épica 0)**
+*   **Funcionalidad:** Se ha creado una nueva sección (`/super-admin`) dedicada exclusivamente al Super-Administrador de la plataforma.
+    *   **Acceso Restringido:** El acceso a esta sección está protegido y solo se permite al usuario cuyo ID coincide con la variable de entorno `NEXT_PUBLIC_SUPER_ADMIN_ID`.
+    *   **Gestión de Organizaciones (HU-00B):** La página principal del panel muestra una tabla con todas las organizaciones registradas, su estado (`ACTIVA`/`SUSPENDIDA`) y su consumo de registros actual.
+    *   **Acciones de Gestión:** El Super-Administrador puede suspender o reactivar una organización directamente desde la tabla.
+    *   **Gestión de Facturación (HU-00C):** Se implementó un botón para "Cerrar Ciclo de Pago". Esta acción crea un registro en `Historial_Facturacion` y reinicia el contador de consumo de la organización a cero.
+*   **Decisiones de Implementación:**
+    *   **Aislamiento por Ruta:** Se creó un layout y una página específicos en `app/super-admin`, manteniendo el código separado y seguro.
+    *   **Lógica de Negocio en Frontend:** Las funciones para cambiar el estado y cerrar el ciclo de facturación se implementaron directamente en el componente de la página, con confirmaciones (`window.confirm`) para las acciones críticas.
+    *   **Contador de Registros Automatizado:** Se implementó un sistema de triggers en la base de datos (`incrementar_contador_registros` y triggers asociados) para que el consumo de cada organización se actualice automáticamente con cada `INSERT` en las tablas contabilizadas.
+
+### 2. **Introducción del Rol "Administrador de Apoyo"**
+*   **Funcionalidad:** Se ha añadido un nuevo rol de personal con permisos restringidos para delegar tareas administrativas.
+    *   **Nuevo Rol en BD:** Se actualizó la tabla `Personal` para aceptar el nuevo rol `ADMINISTRATIVO_APOYO`.
+    *   **Creación en UI:** El formulario de creación de personal ahora incluye un selector para que el administrador principal pueda asignar este nuevo rol.
+    *   **Acceso Restringido:** Los usuarios con este rol solo pueden ver las secciones de "Resumen", "Contratos", "Pagos" y "Reportes".
+*   **Decisiones de Implementación:**
+    *   **Modificación de `CHECK Constraint`:** Se realizó una migración de base de datos para actualizar el `CHECK constraint` de la columna `rol` y permitir el nuevo valor.
+    *   **Navegación Condicional:** Se actualizó el componente `Sidebar` para que muestre un menú de navegación diferente y limitado para los usuarios con el rol `ADMINISTRATIVO_APOYO`.
+
+### 3. **Refactorización Crítica del Registro de Personal**
+*   **Problema:** El sistema de registro de personal, que originalmente dependía de un trigger de base de datos (`on_auth_user_created`), dejó de funcionar de forma intermitente y era imposible de depurar, impidiendo que los nuevos usuarios (tanto `OPERATIVO` como `ADMINISTRATIVO_APOYO`) pudieran vincular sus cuentas.
+*   **Solución Implementada (Pivote a Frontend):** Se tomó la decisión estratégica de eliminar por completo el trigger de la base de datos y mover la lógica de vinculación al frontend para obtener mayor control, visibilidad de errores y robustez.
+*   **Funcionalidad Final:**
+    1.  **Eliminación del Trigger:** Se ejecutó una migración para eliminar la función `handle_new_user` y el trigger `on_auth_user_created` de la base de datos.
+    2.  **Lógica en Frontend:** La página de registro de personal (`/auth/register-personal`) ahora se encarga del proceso completo:
+        *   Primero, crea el usuario en `auth.users` mediante `supabase.auth.signUp()`.
+        *   Si el registro es exitoso, obtiene el ID del nuevo usuario.
+        *   Inmediatamente después, ejecuta una llamada `update` a la tabla `Personal` para guardar ese ID en la columna `supabase_user_id`, completando la vinculación de forma explícita.
+    3.  **Generalización de la Ruta:** La ruta de registro se renombró de `/auth/register-operative` a `/auth/register-personal` para reflejar que ahora sirve para registrar a cualquier miembro del personal, independientemente de su rol.
+*   **Decisiones de Implementación Clave:**
+    *   **Priorización de la Robustez:** Se eligió un enfoque de frontend explícito sobre un trigger de backend implícito para garantizar la fiabilidad del flujo de registro, que es crítico para la aplicación.
+    *   **Manejo de Errores Mejorado:** Al tener la lógica en el frontend, cualquier error en la vinculación ahora se puede capturar y mostrar al usuario directamente, evitando cuentas en estado inconsistente.

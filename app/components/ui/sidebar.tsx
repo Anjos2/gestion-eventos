@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/app/lib/supabase';
-import { FiHome, FiUsers, FiBriefcase, FiFileText, FiTool, FiClipboard, FiCreditCard, FiBarChart2, FiDollarSign } from 'react-icons/fi';
+import { FiHome, FiUsers, FiBriefcase, FiFileText, FiTool, FiClipboard, FiCreditCard, FiBarChart2, FiDollarSign, FiShield } from 'react-icons/fi';
 
 // Define los items de navegación para cada rol
 const navItemsAdmin = [
@@ -23,6 +23,22 @@ const navItemsOperativo = [
   { href: '/dashboard/mis-pagos', label: 'Mis Pagos', icon: <FiDollarSign /> },
 ];
 
+const navItemsAdminApoyo = [
+  { href: '/dashboard', label: 'Resumen', icon: <FiHome /> },
+  { href: '/dashboard/contratos', label: 'Contratos', icon: <FiClipboard /> },
+  { href: '/dashboard/pagos', label: 'Pagos', icon: <FiCreditCard /> },
+  { href: '/dashboard/reportes', label: 'Reportes', icon: <FiBarChart2 /> },
+];
+
+const navItemsSuperAdmin = [
+  { href: '/super-admin', label: 'Gestión Global', icon: <FiShield /> },
+];
+
+// Definir el tipo para el rol del usuario
+type UserRole = 'ADMINISTRATIVO' | 'OPERATIVO' | 'SUPER_ADMIN' | 'ADMINISTRATIVO_APOYO' | null;
+
+const SUPER_ADMIN_USER_ID = process.env.NEXT_PUBLIC_SUPER_ADMIN_ID;
+
 export default function Sidebar() {
   const pathname = usePathname();
   const [userRole, setUserRole] = useState<UserRole>(null);
@@ -34,9 +50,16 @@ export default function Sidebar() {
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
+          // Comprobar si es Super Administrador
+          if (user.id === SUPER_ADMIN_USER_ID) {
+            setUserRole('SUPER_ADMIN');
+            setOrgName('Plataforma');
+            return;
+          }
+
           const { data: personal, error } = await supabase
             .from('Personal')
-            .select('rol, Organizaciones(nombre)')
+            .select('rol, Organizaciones:id_organizacion (nombre)')
             .eq('supabase_user_id', user.id)
             .single();
 
@@ -50,7 +73,6 @@ export default function Sidebar() {
         }
       } catch (error) {
         console.error("Error fetching user role:", error);
-        // Mantener el rol como null para no mostrar items
       } finally {
         setLoading(false);
       }
@@ -59,12 +81,22 @@ export default function Sidebar() {
     fetchUserRole();
   }, []);
 
-  const navItems = (userRole === 'ADMINISTRATIVO' ? navItemsAdmin : navItemsOperativo).map(item => {
-    if (item.href === '/dashboard') {
-      return { ...item, label: 'Resumen' };
+  const getNavItems = () => {
+    switch (userRole) {
+      case 'SUPER_ADMIN':
+        return navItemsSuperAdmin;
+      case 'ADMINISTRATIVO':
+        return navItemsAdmin;
+      case 'ADMINISTRATIVO_APOYO':
+        return navItemsAdminApoyo;
+      case 'OPERATIVO':
+        return navItemsOperativo;
+      default:
+        return [];
     }
-    return item;
-  });
+  };
+
+  const navItems = getNavItems();
 
   if (loading) {
     return (

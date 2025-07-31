@@ -16,9 +16,10 @@ interface Personal {
 }
 
 // Componente para el formulario de añadir personal
-const AddPersonalForm = ({ onAddPersonal }: { onAddPersonal: (name: string, email: string) => void }) => {
+const AddPersonalForm = ({ onAddPersonal }: { onAddPersonal: (name: string, email: string, rol: string) => void }) => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [rol, setRol] = useState('OPERATIVO'); // Rol por defecto
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,15 +27,16 @@ const AddPersonalForm = ({ onAddPersonal }: { onAddPersonal: (name: string, emai
       alert('Por favor, completa el nombre y el email.');
       return;
     }
-    onAddPersonal(name, email);
+    onAddPersonal(name, email, rol);
     setName('');
     setEmail('');
+    setRol('OPERATIVO'); // Resetear al valor por defecto
   };
 
   return (
     <div className="bg-slate-800 p-6 rounded-xl shadow-lg mb-8 border border-slate-700">
       <h2 className="text-2xl font-bold text-white mb-4">Añadir Nuevo Personal</h2>
-      <form onSubmit={handleSubmit} className="grid md:grid-cols-3 gap-4 items-end">
+      <form onSubmit={handleSubmit} className="grid md:grid-cols-4 gap-4 items-end">
         <div>
           <label htmlFor="name" className="block text-sm font-medium text-slate-400 mb-1">Nombre</label>
           <input
@@ -56,6 +58,18 @@ const AddPersonalForm = ({ onAddPersonal }: { onAddPersonal: (name: string, emai
             className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg shadow-sm focus:ring-sky-500 focus:border-sky-500 transition text-white"
             placeholder="juan.perez@ejemplo.com"
           />
+        </div>
+        <div>
+          <label htmlFor="rol" className="block text-sm font-medium text-slate-400 mb-1">Rol</label>
+          <select
+            id="rol"
+            value={rol}
+            onChange={(e) => setRol(e.target.value)}
+            className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg shadow-sm focus:ring-sky-500 focus:border-sky-500 transition text-white"
+          >
+            <option value="OPERATIVO">Operativo</option>
+            <option value="ADMINISTRATIVO_APOYO">Administrativo de Apoyo</option>
+          </select>
         </div>
         <button
           type="submit"
@@ -176,7 +190,7 @@ export default function PersonalPage() {
     fetchUserAndPersonal();
   }, []);
 
-  const handleAddPersonal = async (name: string, email: string) => {
+  const handleAddPersonal = async (name: string, email: string, rol: string) => {
     if (!user) return;
 
     try {
@@ -193,7 +207,7 @@ export default function PersonalPage() {
         .insert({
           nombre: name,
           email: email,
-          rol: 'OPERATIVO',
+          rol: rol, // Usar el rol seleccionado
           id_organizacion: adminData.id_organizacion,
           es_activo: true,
         })
@@ -216,7 +230,7 @@ export default function PersonalPage() {
       alert('Error: No se pudo determinar la organización.');
       return;
     }
-    const inviteLink = `${window.location.origin}/auth/register-operative?org_id=${orgId}`;
+    const inviteLink = `${window.location.origin}/auth/register-personal?org_id=${orgId}`;
     window.prompt("Copia este enlace y envíalo al nuevo miembro del personal:", inviteLink);
   };
 

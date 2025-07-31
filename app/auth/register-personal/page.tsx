@@ -48,13 +48,27 @@ export default function RegisterOperativePage() {
         throw new Error('Este email ya tiene una cuenta de usuario asociada. Intenta iniciar sesión.');
       }
 
-      // 2. Crear el usuario en Supabase Auth. El trigger se encargará de la vinculación.
-      const { error: authError } = await supabase.auth.signUp({
+      // 2. Crear el usuario en Supabase Auth
+      const { data: signUpData, error: authError } = await supabase.auth.signUp({
         email,
         password,
       });
 
       if (authError) throw authError;
+      if (!signUpData.user) throw new Error('No se pudo crear el usuario.');
+
+      // 3. Vincular el nuevo ID de usuario con el registro de Personal
+      const { error: updateError } = await supabase
+        .from('Personal')
+        .update({ supabase_user_id: signUpData.user.id })
+        .eq('id', personalData.id);
+
+      if (updateError) {
+        // Opcional: Intentar eliminar el usuario de auth si la vinculación falla
+        // para evitar usuarios huérfanos. Requiere permisos de administrador.
+        console.error('Error de vinculación, el usuario de auth podría quedar huérfano:', updateError);
+        throw new Error('Ocurrió un error al vincular tu cuenta con tu registro de personal.');
+      }
 
       alert('¡Registro completado con éxito! Revisa tu correo para confirmar tu cuenta y luego podrás iniciar sesión.');
       router.push('/auth/login');

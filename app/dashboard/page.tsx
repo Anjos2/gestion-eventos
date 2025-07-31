@@ -51,7 +51,7 @@ export default function DashboardPage() {
 
         const { data: adminData, error: adminError } = await supabase
           .from('Personal')
-          .select('id_organizacion, Organizaciones(nombre)')
+          .select('id_organizacion, Organizaciones:id_organizacion (nombre)')
           .eq('supabase_user_id', user.id)
           .single();
 
