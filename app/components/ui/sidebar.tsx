@@ -11,7 +11,7 @@ const navItemsAdmin = [
   { href: '/dashboard', label: 'Resumen', icon: <FiHome /> },
   { href: '/dashboard/personal', label: 'Personal', icon: <FiUsers /> },
   { href: '/dashboard/contratadores', label: 'Contratadores', icon: <FiBriefcase /> },
-  { href: '/dashboard/tipos-contrato', label: 'Tipos de Contrato', icon: <FiFileText /> },
+  { href: '/dashboard/tipos-contrato', label: 'Tipos de contrato', icon: <FiFileText /> },
   { href: '/dashboard/servicios', label: 'Servicios', icon: <FiTool /> },
   { href: '/dashboard/contratos', label: 'Contratos', icon: <FiClipboard /> },
   { href: '/dashboard/pagos', label: 'Pagos', icon: <FiCreditCard /> },
@@ -20,8 +20,8 @@ const navItemsAdmin = [
 
 const navItemsOperativo = [
   { href: '/dashboard', label: 'Resumen', icon: <FiHome /> },
-  { href: '/dashboard/mis-participaciones', label: 'Mis Asistencias', icon: <FiCalendar /> },
-  { href: '/dashboard/mis-pagos', label: 'Mis Pagos', icon: <FiDollarSign /> },
+  { href: '/dashboard/mis-participaciones', label: 'Mis asistencias', icon: <FiCalendar /> },
+  { href: '/dashboard/mis-pagos', label: 'Mis pagos', icon: <FiDollarSign /> },
 ];
 
 const navItemsAdminApoyo = [
@@ -32,7 +32,7 @@ const navItemsAdminApoyo = [
 ];
 
 const navItemsSuperAdmin = [
-  { href: '/super-admin', label: 'Gestión Global', icon: <FiShield /> },
+  { href: '/super-admin', label: 'Gestión global', icon: <FiShield /> },
 ];
 
 // Definir el tipo para el rol del usuario

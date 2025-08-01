@@ -172,19 +172,19 @@ export default function DashboardPage() {
         <>
           <h1 className="text-4xl font-bold text-white mb-8">Hola, {operativoStats?.nombre}</h1>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <DashboardCard title="Asistencias Puntuales" value={operativoStats?.asistenciasPuntuales || 0} icon={<FiThumbsUp className="text-green-400 text-2xl" />} />
-            <DashboardCard title="Asistencias con Tardanza" value={operativoStats?.asistenciasTardanzas || 0} icon={<FiAlertCircle className="text-yellow-400 text-2xl" />} />
-            <DashboardCard title="Ausencias Registradas" value={operativoStats?.asistenciasAusencias || 0} icon={<FiXCircle className="text-red-400 text-2xl" />} />
+            <DashboardCard title="Asistencias puntuales" value={operativoStats?.asistenciasPuntuales || 0} icon={<FiThumbsUp className="text-green-400 text-2xl" />} />
+            <DashboardCard title="Asistencias con tardanza" value={operativoStats?.asistenciasTardanzas || 0} icon={<FiAlertCircle className="text-yellow-400 text-2xl" />} />
+            <DashboardCard title="Ausencias registradas" value={operativoStats?.asistenciasAusencias || 0} icon={<FiXCircle className="text-red-400 text-2xl" />} />
           </div>
         </>
       ) : (
         <>
           <h1 className="text-4xl font-bold text-white mb-8">{adminStats?.orgName || 'Dashboard'}</h1>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <DashboardCard title="Contratos por Confirmar" value={adminStats?.contratosPorConfirmar || 0} link="/dashboard/contratos" icon={<FiClipboard className="text-sky-400 text-2xl" />}><p>Eventos que requieren asignación final.</p></DashboardCard>
-            <DashboardCard title="Pagos Pend. Aprobación" value={adminStats?.pagosPendientesAprobacion || 0} link="/dashboard/pagos/gestion" icon={<FiClock className="text-yellow-400 text-2xl" />}><p>Lotes esperando confirmación.</p></DashboardCard>
-            <DashboardCard title="Contratos Completados" value={adminStats?.contratosCompletadosMes || 0} link="/dashboard/contratos" icon={<FiCheckSquare className="text-green-400 text-2xl" />}><p>En los últimos 30 días.</p></DashboardCard>
-            <DashboardCard title="Próximo Evento" value={adminStats?.proximoEvento?.contratador || 'Ninguno'} link={adminStats?.proximoEvento ? `/dashboard/contratos/${adminStats.proximoEvento.id}` : '/dashboard/contratos'} icon={<FiCalendar className="text-purple-400 text-2xl" />}>
+            <DashboardCard title="Contratos por confirmar" value={adminStats?.contratosPorConfirmar || 0} link="/dashboard/contratos" icon={<FiClipboard className="text-sky-400 text-2xl" />}><p>Eventos que requieren asignación final.</p></DashboardCard>
+            <DashboardCard title="Pagos pendientes de aprobación" value={adminStats?.pagosPendientesAprobacion || 0} link="/dashboard/pagos/gestion" icon={<FiClock className="text-yellow-400 text-2xl" />}><p>Lotes esperando confirmación.</p></DashboardCard>
+            <DashboardCard title="Contratos completados" value={adminStats?.contratosCompletadosMes || 0} link="/dashboard/contratos" icon={<FiCheckSquare className="text-green-400 text-2xl" />}><p>En los últimos 30 días.</p></DashboardCard>
+            <DashboardCard title="Próximo evento" value={adminStats?.proximoEvento?.contratador || 'Ninguno'} link={adminStats?.proximoEvento ? `/dashboard/contratos/${adminStats.proximoEvento.id}` : '/dashboard/contratos'} icon={<FiCalendar className="text-purple-400 text-2xl" />}>
               {adminStats?.proximoEvento ? <p>{adminStats.proximoEvento.fecha}</p> : <p>No hay eventos programados.</p>}
             </DashboardCard>
           </div>

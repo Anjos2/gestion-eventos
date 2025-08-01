@@ -40,7 +40,7 @@ const AddPersonalForm = ({ onAddPersonal }: { onAddPersonal: (name: string, emai
 
   return (
     <div className="bg-slate-800 p-6 rounded-xl shadow-lg mb-8 border border-slate-700">
-      <h2 className="text-2xl font-bold text-white mb-4">Añadir Nuevo Personal</h2>
+      <h2 className="text-2xl font-bold text-white mb-4">Añadir nuevo personal</h2>
       <form onSubmit={handleSubmit} className="grid md:grid-cols-4 gap-4 items-end">
         <div>
           <label htmlFor="name" className="block text-sm font-medium text-slate-400 mb-1">Nombre</label>
@@ -57,7 +57,7 @@ const AddPersonalForm = ({ onAddPersonal }: { onAddPersonal: (name: string, emai
             <option value="ADMINISTRATIVO_APOYO">Administrativo de Apoyo</option>
           </select>
         </div>
-        <button type="submit" className="w-full md:w-auto justify-self-start px-6 py-2 bg-sky-600 text-white font-semibold rounded-lg hover:bg-sky-700">Añadir Personal</button>
+        <button type="submit" className="w-full md:w-auto justify-self-start px-6 py-2 bg-sky-600 text-white font-semibold rounded-lg hover:bg-sky-700">Añadir personal</button>
       </form>
     </div>
   );
@@ -92,7 +92,7 @@ const PersonalTable = ({ personal, onToggleStatus, onGenerateInviteLink }: { per
                 {p.supabase_user_id ? (
                   <span className="px-3 py-1 text-xs font-semibold rounded-full bg-blue-900 text-blue-200">Registrado</span>
                 ) : (
-                  <button onClick={() => onGenerateInviteLink(p.id_organizacion!)} className="text-teal-400 hover:text-teal-300">Generar Enlace</button>
+                  <button onClick={() => onGenerateInviteLink(p.id_organizacion!)} className="text-teal-400 hover:text-teal-300">Generar enlace</button>
                 )}
               </td>
               <td className="px-6 py-4 text-sm font-medium">
@@ -216,7 +216,7 @@ function PersonalPageContent() {
 
   return (
     <div>
-      <h1 className="text-3xl font-bold text-white mb-6">Gestión de Personal</h1>
+      <h1 className="text-3xl font-bold text-white mb-6">Gestión de personal</h1>
       <AddPersonalForm onAddPersonal={handleAddPersonal} />
       <PersonalTable personal={personal} onToggleStatus={handleToggleStatus} onGenerateInviteLink={handleGenerateInviteLink} />
       <Pagination

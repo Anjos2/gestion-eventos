@@ -641,3 +641,27 @@ Esta versión se centra en mejorar la experiencia de usuario para el rol `OPERAT
     *   **Componente `Pagination.tsx` Reutilizable:** Se creó un componente de paginación genérico y reutilizable en `app/components/ui/Pagination.tsx`. Este componente maneja la lógica de la interfaz y emite eventos de cambio de página.
     *   **Carga de Datos Paginada:** La función `fetchContratos` en la página de contratos se modificó para usar el método `.range()` de Supabase, solicitando únicamente los datos de la página actual.
     *   **Manejo de Estado:** Se implementó el estado necesario en la página de contratos para gestionar la página actual y el conteo total de registros, asegurando que la interfaz se actualice correctamente al navegar.
+---
+# Bitácora de Implementación (v1.5 - Mejoras de UX y Corrección de Errores)
+
+Esta versión se enfoca en pulir la experiencia de usuario, solucionar errores críticos de despliegue y estandarizar la interfaz para una mayor coherencia y profesionalismo.
+
+### 1. **Corrección de Despliegue en Vercel**
+*   **Problema:** El despliegue en Vercel fallaba con un error de `useSearchParams() should be wrapped in a suspense boundary` en la página de registro de personal.
+*   **Solución:** Se refactorizó la página `/auth/register-personal` para envolver el componente que utiliza `useSearchParams` dentro de un `Suspense boundary` de React. Esto permite que Next.js maneje correctamente la carga asíncrona de los parámetros de la URL, solucionando el error de pre-renderizado y permitiendo un despliegue exitoso.
+
+### 2. **Mejora de Navegación en Contratos**
+*   **Funcionalidad:** Se ha mejorado la usabilidad de la tabla de contratos en `/dashboard/contratos`.
+    *   Anteriormente, solo el nombre del cliente era un enlace al detalle del contrato.
+    *   Ahora, las columnas "Tipo de Contrato" y "Fecha del Evento" también son enlaces, permitiendo un acceso más rápido y flexible a los detalles desde múltiples puntos de la fila.
+*   **Decisiones de Implementación:**
+    *   Se modificó el componente `ContratosTable` para envolver el contenido de las celdas relevantes con el componente `Link` de Next.js, apuntando a la ruta dinámica del detalle del contrato.
+
+### 3. **Consistencia en la Interfaz de Usuario (UX)**
+*   **Problema:** Existía un uso inconsistente de mayúsculas y minúsculas en títulos, etiquetas y botones a lo largo de toda la aplicación, lo que afectaba la coherencia visual.
+*   **Solución:** Se realizó una revisión exhaustiva de todas las páginas y componentes de la aplicación, estandarizando la capitalización de los textos para seguir un estilo de "sentence case" (solo la primera letra de la oración en mayúscula) en la mayoría de los elementos de la UI.
+    *   **Páginas Afectadas:** `/`, `/auth/login`, `/auth/register`, y todas las páginas dentro de `/dashboard` (Personal, Contratadores, Tipos de Contrato, Servicios, Contratos, Pagos, Reportes, etc.).
+    *   **Componentes Afectados:** Se actualizaron los componentes reutilizables como `Sidebar` para reflejar la nueva estandarización en las etiquetas de navegación.
+*   **Decisiones de Implementación:**
+    *   Se utilizó la herramienta de reemplazo para modificar sistemáticamente los archivos `.tsx` correspondientes, asegurando que todos los textos visibles por el usuario sigan una convención de mayúsculas coherente y profesional.
+    *   Se eliminó un enlace obsoleto en la página de registro que apuntaba a un flujo de registro de personal que ya no se utiliza.

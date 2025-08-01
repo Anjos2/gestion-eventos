@@ -75,16 +75,16 @@ export default function MisParticipacionesPage() {
 
   return (
     <div className="p-4 md:p-6 lg:p-8">
-      <h1 className="text-3xl font-bold text-white mb-6">Mis Asistencias y Participaciones</h1>
+      <h1 className="text-3xl font-bold text-white mb-6">Mis asistencias y participaciones</h1>
 
       {/* --- Filtros --- */}
       <div className="bg-slate-800 p-4 rounded-xl shadow-lg mb-8 border border-slate-700 flex items-end gap-4">
         <div>
-          <label htmlFor="startDate" className="block text-sm font-medium text-slate-400 mb-1">Fecha de Inicio</label>
+          <label htmlFor="startDate" className="block text-sm font-medium text-slate-400 mb-1">Fecha de inicio</label>
           <input type="date" id="startDate" value={startDate} onChange={e => setStartDate(e.target.value)} className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white" />
         </div>
         <div>
-          <label htmlFor="endDate" className="block text-sm font-medium text-slate-400 mb-1">Fecha de Fin</label>
+          <label htmlFor="endDate" className="block text-sm font-medium text-slate-400 mb-1">Fecha de fin</label>
           <input type="date" id="endDate" value={endDate} onChange={e => setEndDate(e.target.value)} className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white" />
         </div>
         <button onClick={handleFilter} className="px-6 py-2 bg-sky-600 text-white font-semibold rounded-lg shadow-md hover:bg-sky-700 flex items-center gap-2">
@@ -103,11 +103,11 @@ export default function MisParticipacionesPage() {
           <table className="min-w-full divide-y divide-slate-700">
             <thead className="bg-slate-900">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase">Fecha Evento</th>
-                <th className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase">Tipo Contrato</th>
-                <th className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase">Servicio Realizado</th>
-                <th className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase">Estado Asistencia</th>
-                <th className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase">Monto Pactado</th>
+                <th className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase">Fecha del evento</th>
+                <th className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase">Tipo de contrato</th>
+                <th className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase">Servicio realizado</th>
+                <th className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase">Estado de asistencia</th>
+                <th className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase">Monto pactado</th>
               </tr>
             </thead>
             <tbody className="bg-slate-800 divide-y divide-slate-700">

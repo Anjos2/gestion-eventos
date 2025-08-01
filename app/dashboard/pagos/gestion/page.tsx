@@ -110,7 +110,7 @@ export default function GestionLotesPage() {
                 onClick={() => handleAnularLote(lote.id)}
                 className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md text-sm flex items-center gap-2 transition-colors"
               >
-                <FiXCircle /> Anular Lote
+                <FiXCircle /> Anular lote
               </button>
             )}
           </li>
@@ -124,10 +124,10 @@ export default function GestionLotesPage() {
 
   return (
     <div className="p-4 md:p-6 lg:p-8">
-      <h1 className="text-3xl font-bold text-white mb-6">Gestión de Lotes Creados</h1>
+      <h1 className="text-3xl font-bold text-white mb-6">Gestión de lotes creados</h1>
       <div className="flex border-b border-slate-700 mb-6">
         <button onClick={() => setActiveTab('pendientes')} className={`py-3 px-6 font-semibold flex items-center gap-2 transition-colors ${activeTab === 'pendientes' ? 'text-sky-400 border-b-2 border-sky-400' : 'text-slate-400 hover:text-white'}`}>
-          <FiClock /> Pendientes de Aprobación ({pendientes.length})
+          <FiClock /> Pendientes de aprobación ({pendientes.length})
         </button>
         <button onClick={() => setActiveTab('reclamados')} className={`py-3 px-6 font-semibold flex items-center gap-2 transition-colors ${activeTab === 'reclamados' ? 'text-red-400 border-b-2 border-red-400' : 'text-slate-400 hover:text-white'}`}>
           <FiAlertTriangle /> Reclamados ({reclamados.length})

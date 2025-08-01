@@ -43,13 +43,13 @@ export default function RegisterPage() {
     <div className="flex justify-center items-center min-h-screen bg-slate-900">
       <div className="w-full max-w-md p-8 space-y-6 bg-slate-800 rounded-2xl shadow-2xl border border-slate-700">
         <div className="text-center">
-          <h1 className="text-4xl font-bold text-white">Crear Cuenta</h1>
+          <h1 className="text-4xl font-bold text-white">Crear cuenta</h1>
           <p className="text-slate-400 mt-2">Únete a nuestra plataforma</p>
         </div>
         <form onSubmit={handleRegister} className="space-y-4">
           <div>
             <label className="block text-sm font-semibold text-slate-300 mb-2" htmlFor="fullName">
-              Nombre Completo
+              Nombre completo
             </label>
             <input
               className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500 transition"
@@ -63,7 +63,7 @@ export default function RegisterPage() {
           </div>
           <div>
             <label className="block text-sm font-semibold text-slate-300 mb-2" htmlFor="orgName">
-              Nombre de la Organización
+              Nombre de la organización
             </label>
             <input
               className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500 transition"
@@ -77,7 +77,7 @@ export default function RegisterPage() {
           </div>
           <div>
             <label className="block text-sm font-semibold text-slate-300 mb-2" htmlFor="email">
-              Correo Electrónico
+              Correo electrónico
             </label>
             <input
               className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500 transition"
@@ -115,7 +115,7 @@ export default function RegisterPage() {
               type="submit"
               disabled={loading}
             >
-              {loading ? 'Creando cuenta...' : 'Crear Cuenta'}
+              {loading ? 'Creando cuenta...' : 'Crear cuenta'}
             </button>
           </div>
         </form>
@@ -124,12 +124,6 @@ export default function RegisterPage() {
             ¿Ya tienes una cuenta?{' '}
             <Link href="/auth/login" className="font-medium text-sky-400 hover:text-sky-300">
               Inicia sesión aquí
-            </Link>
-          </p>
-          <p>
-            ¿Eres personal de una organización existente?{' '}
-            <Link href="/auth/register-operative" className="font-medium text-teal-400 hover:text-teal-300">
-              Regístrate como Personal Operativo
             </Link>
           </p>
         </div>

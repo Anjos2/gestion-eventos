@@ -8,8 +8,8 @@ export default function PagosLayout({ children }: { children: React.ReactNode })
   const pathname = usePathname();
 
   const navLinks = [
-    { href: '/dashboard/pagos', label: 'Pagos Pendientes', icon: <FiPlusCircle /> },
-    { href: '/dashboard/pagos/gestion', label: 'Gestionar Lotes', icon: <FiArchive /> },
+    { href: '/dashboard/pagos', label: 'Pagos pendientes', icon: <FiPlusCircle /> },
+    { href: '/dashboard/pagos/gestion', label: 'Gestionar lotes', icon: <FiArchive /> },
   ];
 
   return (

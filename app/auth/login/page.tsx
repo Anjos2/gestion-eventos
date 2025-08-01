@@ -35,13 +35,13 @@ export default function LoginPage() {
     <div className="flex justify-center items-center min-h-screen bg-slate-900">
       <div className="w-full max-w-md p-8 space-y-8 bg-slate-800 rounded-2xl shadow-2xl border border-slate-700">
         <div className="text-center">
-          <h1 className="text-4xl font-bold text-white">Iniciar Sesión</h1>
+          <h1 className="text-4xl font-bold text-white">Iniciar sesión</h1>
           <p className="text-slate-400 mt-2">Bienvenido de nuevo</p>
         </div>
         <form onSubmit={handleLogin} className="space-y-6">
           <div>
             <label className="block text-sm font-semibold text-slate-300 mb-2" htmlFor="email">
-              Correo Electrónico
+              Correo electrónico
             </label>
             <input
               className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500 transition"
@@ -76,7 +76,7 @@ export default function LoginPage() {
               type="submit"
               disabled={loading}
             >
-              {loading ? 'Iniciando...' : 'Iniciar Sesión'}
+              {loading ? 'Iniciando...' : 'Iniciar sesión'}
             </button>
           </div>
         </form>
@@ -84,7 +84,7 @@ export default function LoginPage() {
           <p>
             ¿Quieres crear una nueva organización?{' '}
             <Link href="/auth/register" className="font-medium text-sky-400 hover:text-sky-300">
-              Regístrate como Administrador
+              Regístrate como administrador
             </Link>
           </p>
         </div>

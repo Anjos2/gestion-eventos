@@ -255,7 +255,7 @@ export default function PagosPage() {
 
   return (
     <div className="p-4 md:p-6 lg:p-8">
-      <h1 className="text-3xl font-bold text-white mb-6">Pagos Pendientes al Personal</h1>
+      <h1 className="text-3xl font-bold text-white mb-6">Pagos pendientes al personal</h1>
       
       <div className="mb-6 relative">
         <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -282,7 +282,7 @@ export default function PagosPage() {
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4">
                   <h2 className="text-2xl font-bold text-white mb-2 md:mb-0">{personal.nombre_personal}</h2>
                   <div className="text-right">
-                    <p className="text-slate-400 text-sm">Total Seleccionado a Pagar</p>
+                    <p className="text-slate-400 text-sm">Total seleccionado a pagar</p>
                     <p className="text-3xl font-bold text-yellow-400">S/{totalAPagar.toFixed(2)}</p>
                   </div>
                 </div>
@@ -301,10 +301,10 @@ export default function PagosPage() {
                         </th>
                         <th className="px-4 py-2 font-semibold text-slate-400 uppercase tracking-wider">Servicio</th>
                         <th className="px-4 py-2 font-semibold text-slate-400 uppercase tracking-wider text-center">Contrato</th>
-                        <th className="px-4 py-2 font-semibold text-slate-400 uppercase tracking-wider">Tipo Contrato</th>
-                        <th className="px-4 py-2 font-semibold text-slate-400 uppercase tracking-wider">Fecha Evento</th>
+                        <th className="px-4 py-2 font-semibold text-slate-400 uppercase tracking-wider">Tipo de contrato</th>
+                        <th className="px-4 py-2 font-semibold text-slate-400 uppercase tracking-wider">Fecha del evento</th>
                         <th className="px-4 py-2 font-semibold text-slate-400 uppercase tracking-wider">Asistencia</th>
-                        <th className="px-4 py-2 font-semibold text-slate-400 uppercase tracking-wider text-right">Monto a Pagar</th>
+                        <th className="px-4 py-2 font-semibold text-slate-400 uppercase tracking-wider text-right">Monto a pagar</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-700">
@@ -326,7 +326,7 @@ export default function PagosPage() {
                                 href={`/dashboard/contratos/${servicio.contrato_id}`}
                                 className="bg-slate-700 hover:bg-slate-600 text-sky-300 font-semibold py-1 px-3 rounded-lg text-xs transition-colors duration-200"
                               >
-                                Ver Contrato
+                                Ver contrato
                               </Link>
                             </td>
                             <td className="px-4 py-3">{servicio.tipo_contrato_nombre}</td>
@@ -372,7 +372,7 @@ export default function PagosPage() {
                       disabled={selectedForPerson.length === 0 || pagando}
                       className="bg-sky-600 hover:bg-sky-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-colors duration-200 transform hover:scale-105 disabled:bg-slate-600 disabled:cursor-not-allowed disabled:transform-none"
                     >
-                      {pagando ? 'Procesando...' : `Crear Lote de Pago (${selectedForPerson.length} servicios)`}
+                      {pagando ? 'Procesando...' : `Crear lote de pago (${selectedForPerson.length} servicios)`}
                     </button>
                 </div>
               </div>

@@ -141,24 +141,24 @@ export default function MisPagosPage() {
 
   return (
     <div className="p-4 md:p-8">
-      <h1 className="text-3xl font-bold text-white mb-6">Mis Lotes de Pago</h1>
+      <h1 className="text-3xl font-bold text-white mb-6">Mis lotes de pago</h1>
       <div className="space-y-6">
         {lotes.length > 0 ? (
           lotes.map(lote => (
             <div key={lote.id} className={`bg-slate-800 rounded-xl shadow-lg p-6 border-l-4 ${lote.estado === 'RECLAMADO' ? 'border-red-500' : 'border-yellow-500'}`}>
               <div className="flex flex-col md:flex-row justify-between items-start mb-4">
                 <div>
-                  <h2 className="text-2xl font-bold text-white">Lote de Pago #{lote.id}</h2>
+                  <h2 className="text-2xl font-bold text-white">Lote de pago #{lote.id}</h2>
                   <p className="text-sm text-slate-400">Generado el: {lote.fecha_pago}</p>
                 </div>
                 <div className="text-right mt-4 md:mt-0">
-                  <p className="text-slate-400">Monto Total</p>
+                  <p className="text-slate-400">Monto total</p>
                   <p className="text-3xl font-bold text-yellow-400">S/{lote.monto_total.toFixed(2)}</p>
                 </div>
               </div>
 
               <div className="mb-4">
-                <h3 className="font-semibold text-white mb-2">Detalles del Pago:</h3>
+                <h3 className="font-semibold text-white mb-2">Detalles del pago:</h3>
                 <ul className="space-y-2 text-sm">
                   {lote.detalles.map((d, index) => (
                     <li key={index} className="flex justify-between items-center bg-slate-700/50 p-2 rounded-md">
@@ -191,7 +191,7 @@ export default function MisPagosPage() {
                     className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-colors disabled:bg-slate-600"
                   >
                     <FiThumbsUp />
-                    {processing === lote.id ? 'Procesando...' : 'Aceptar y Confirmar Pago'}
+                    {processing === lote.id ? 'Procesando...' : 'Aceptar y confirmar pago'}
                   </button>
                 </div>
               )}
@@ -207,7 +207,7 @@ export default function MisPagosPage() {
         ) : (
           <div className="text-center py-16 bg-slate-800 rounded-xl border border-slate-700">
             <FiCheck className="mx-auto text-6xl text-green-500 mb-4" />
-            <h2 className="text-2xl font-bold text-white">Todo en Orden</h2>
+            <h2 className="text-2xl font-bold text-white">Todo en orden</h2>
             <p className="text-slate-400 mt-2">No tienes lotes de pago pendientes de aprobación.</p>
           </div>
         )}

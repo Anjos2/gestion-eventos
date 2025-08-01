@@ -237,12 +237,12 @@ export default function RentabilidadContratoReportePage() {
 
   return (
     <div className="p-4 md:p-6 lg:p-8">
-      <h1 className="text-3xl font-bold text-white mb-6">Reporte de Rentabilidad por Tipo de Contrato</h1>
+      <h1 className="text-3xl font-bold text-white mb-6">Reporte de rentabilidad por tipo de contrato</h1>
 
       <div className="bg-slate-800 rounded-xl shadow-lg p-6 border border-slate-700 mb-8">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="md:col-span-3">
-                <label className="block text-sm font-medium text-slate-400 mb-2 flex items-center"><FiFileText className="mr-2"/>Tipos de Contrato</label>
+                <label className="block text-sm font-medium text-slate-400 mb-2 flex items-center"><FiFileText className="mr-2"/>Tipos de contrato</label>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
                     {tiposContrato.map(tc => (
                         <button 
@@ -255,16 +255,16 @@ export default function RentabilidadContratoReportePage() {
                 </div>
             </div>
             <div>
-                <label htmlFor="start-date" className="block text-sm font-medium text-slate-400 mb-1 flex items-center"><FiCalendar className="mr-2"/>Fecha Inicio</label>
+                <label htmlFor="start-date" className="block text-sm font-medium text-slate-400 mb-1 flex items-center"><FiCalendar className="mr-2"/>Fecha de inicio</label>
                 <input type="date" id="start-date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded-lg text-white p-2 focus:outline-none focus:ring-2 focus:ring-sky-500" />
             </div>
             <div>
-                <label htmlFor="end-date" className="block text-sm font-medium text-slate-400 mb-1 flex items-center"><FiCalendar className="mr-2"/>Fecha Fin</label>
+                <label htmlFor="end-date" className="block text-sm font-medium text-slate-400 mb-1 flex items-center"><FiCalendar className="mr-2"/>Fecha de fin</label>
                 <input type="date" id="end-date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded-lg text-white p-2 focus:outline-none focus:ring-2 focus:ring-sky-500" />
             </div>
             <div className="self-end">
                 <button onClick={handleGenerateReport} disabled={loading} className="w-full flex items-center justify-center bg-sky-600 hover:bg-sky-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-colors duration-200 disabled:bg-slate-600">
-                    {loading ? 'Generando...' : <><FiFilter className="mr-2" /> Generar Reporte</>}
+                    {loading ? 'Generando...' : <><FiFilter className="mr-2" /> Generar reporte</>}
                 </button>
             </div>
         </div>
@@ -291,29 +291,29 @@ export default function RentabilidadContratoReportePage() {
                 <p className="text-sm text-slate-400 mb-4">{data.cantidadContratos} contratos en el período</p>
                 <div className="space-y-3">
                     <div className="flex justify-between items-center">
-                        <span className="text-slate-300 flex items-center"><FiTrendingUp className="mr-2 text-green-400"/>Ingreso Total</span>
+                        <span className="text-slate-300 flex items-center"><FiTrendingUp className="mr-2 text-green-400"/>Ingreso total</span>
                         <span className="font-bold text-green-400 text-lg">S/{data.ingresoTotal.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between items-center">
-                        <span className="text-slate-300 flex items-center"><FiTrendingDown className="mr-2 text-red-400"/>Costo Total</span>
+                        <span className="text-slate-300 flex items-center"><FiTrendingDown className="mr-2 text-red-400"/>Costo total</span>
                         <span className="font-bold text-red-400 text-lg">S/{data.costoTotal.toFixed(2)}</span>
                     </div>
                     <div className="border-t border-slate-700 my-2"></div>
                     <div className="flex justify-between items-center">
-                        <span className="text-white font-bold flex items-center"><FiBarChart2 className="mr-2 text-sky-400"/>Ingreso Neto</span>
+                        <span className="text-white font-bold flex items-center"><FiBarChart2 className="mr-2 text-sky-400"/>Ingreso neto</span>
                         <span className="font-bold text-sky-400 text-2xl">S/{data.ingresoNeto.toFixed(2)}</span>
                     </div>
                 </div>
                 <div className="text-center mt-4">
                     <button onClick={() => setExpandedCard(expandedCard === data.tipoContratoNombre ? null : data.tipoContratoNombre)} className="text-sky-400 hover:text-sky-300 text-sm font-semibold">
-                        {expandedCard === data.tipoContratoNombre ? 'Ocultar Detalles' : 'Ver Detalles'}
+                        {expandedCard === data.tipoContratoNombre ? 'Ocultar detalles' : 'Ver detalles'}
                     </button>
                 </div>
                 {expandedCard === data.tipoContratoNombre && (
                     <div className="mt-4 pt-4 border-t border-slate-700">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
-                                <h4 className="font-bold text-white mb-2">Desglose de Ingresos</h4>
+                                <h4 className="font-bold text-white mb-2">Desglose de ingresos</h4>
                                 <div className="overflow-auto max-h-60">
                                     <table className="min-w-full text-sm">
                                         <thead className="bg-slate-900">
@@ -339,7 +339,7 @@ export default function RentabilidadContratoReportePage() {
                                 </div>
                             </div>
                             <div>
-                                <h4 className="font-bold text-white mb-2">Desglose de Costos</h4>
+                                <h4 className="font-bold text-white mb-2">Desglose de costos</h4>
                                 <div className="overflow-auto max-h-60">
                                     <table className="min-w-full text-sm">
                                         <thead className="bg-slate-900">

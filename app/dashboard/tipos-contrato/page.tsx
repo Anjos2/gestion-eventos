@@ -30,10 +30,10 @@ const AddTipoContratoForm = ({ onAddTipoContrato }: { onAddTipoContrato: (tipoCo
 
   return (
     <div className="bg-slate-800 p-6 rounded-xl shadow-lg mb-8 border border-slate-700">
-      <h2 className="text-2xl font-bold text-white mb-4">Añadir Nuevo Tipo de Contrato</h2>
+      <h2 className="text-2xl font-bold text-white mb-4">Añadir nuevo tipo de contrato</h2>
       <form onSubmit={handleSubmit} className="grid md:grid-cols-3 gap-4 items-end">
         <div className="md:col-span-1">
-          <label htmlFor="nombre" className="block text-sm font-medium text-slate-400 mb-1">Nombre del Servicio</label>
+          <label htmlFor="nombre" className="block text-sm font-medium text-slate-400 mb-1">Nombre del servicio</label>
           <input
             id="nombre"
             type="text"
@@ -44,7 +44,7 @@ const AddTipoContratoForm = ({ onAddTipoContrato }: { onAddTipoContrato: (tipoCo
           />
         </div>
         <div>
-          <label htmlFor="ingreso_base" className="block text-sm font-medium text-slate-400 mb-1">Ingreso Base (S/.)</label>
+          <label htmlFor="ingreso_base" className="block text-sm font-medium text-slate-400 mb-1">Ingreso base (S/.)</label>
           <input
             id="ingreso_base"
             type="number"
@@ -59,7 +59,7 @@ const AddTipoContratoForm = ({ onAddTipoContrato }: { onAddTipoContrato: (tipoCo
           type="submit"
           className="w-full md:w-auto justify-self-start px-6 py-2 bg-sky-600 text-white font-semibold rounded-lg shadow-md hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 transition-transform transform hover:scale-105"
         >
-          Añadir Tipo
+          Añadir tipo
         </button>
       </form>
     </div>
@@ -213,7 +213,7 @@ export default function TiposContratoPage() {
 
   return (
     <div>
-      <h1 className="text-3xl font-bold text-white mb-6">Gestión de Tipos de Contrato</h1>
+      <h1 className="text-3xl font-bold text-white mb-6">Gestión de tipos de contrato</h1>
       <AddTipoContratoForm onAddTipoContrato={handleAddTipoContrato} />
       <TiposContratoTable tiposContrato={tiposContrato} onToggleStatus={handleToggleStatus} />
     </div>

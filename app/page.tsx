@@ -7,7 +7,7 @@ export default function Page() {
     <main className="flex min-h-screen flex-col items-center justify-center p-12 bg-slate-900 text-white">
       <div className="text-center max-w-3xl mx-auto">
         <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-sky-400 to-blue-600">
-          Plataforma de Gestión de Eventos
+          Plataforma de gestión de eventos
         </h1>
         <p className="mt-6 text-lg md:text-xl text-slate-300">
           Organiza, gestiona y paga a tu personal de forma centralizada, eficiente y sin complicaciones.
@@ -17,7 +17,7 @@ export default function Page() {
             href="/auth/login"
             className="w-full sm:w-auto rounded-lg bg-sky-600 px-8 py-4 text-lg font-semibold text-white shadow-lg hover:bg-sky-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 transition-transform transform hover:scale-105"
           >
-            Iniciar Sesión
+            Iniciar sesión
           </Link>
           <Link
             href="/auth/register"

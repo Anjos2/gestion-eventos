@@ -56,7 +56,7 @@ const AsignarServicioModal = ({ isOpen, onClose, servicios, onAsignar }) => {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50">
       <div className="bg-slate-800 p-6 rounded-lg shadow-xl w-full max-w-md border border-slate-700">
-        <h3 className="text-xl font-bold text-white mb-4">Asignar Servicio</h3>
+        <h3 className="text-xl font-bold text-white mb-4">Asignar servicio</h3>
         <select 
           value={selectedServicio}
           onChange={(e) => setSelectedServicio(e.target.value)}
@@ -303,7 +303,7 @@ export default function ContratoDetailPage() {
       <div className="mb-6 flex justify-between items-center">
         <Link href="/dashboard/contratos" className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors">
           <FiArrowLeft />
-          Volver a Contratos
+          Volver a contratos
         </Link>
         <div className="flex items-center gap-4">
           {contrato.estado !== 'COMPLETADO' && contrato.estado_asignacion === 'PENDIENTE' && (
@@ -312,7 +312,7 @@ export default function ContratoDetailPage() {
               className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors"
             >
               <FiCheckCircle />
-              Confirmar Asignaciones
+              Confirmar asignaciones
             </button>
           )}
           {contrato.estado !== 'COMPLETADO' && (
@@ -320,7 +320,7 @@ export default function ContratoDetailPage() {
               onClick={handleCerrarContrato}
               className="px-4 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-colors"
             >
-              Cerrar Contrato
+              Cerrar contrato
             </button>
           )}
           {contrato.estado !== 'COMPLETADO' && (
@@ -328,14 +328,14 @@ export default function ContratoDetailPage() {
               onClick={handleEliminarContrato}
               className="px-4 py-2 bg-gray-700 text-white font-semibold rounded-lg hover:bg-gray-800 transition-colors"
             >
-              Eliminar Contrato
+              Eliminar contrato
             </button>
           )}
         </div>
       </div>
       <div className="space-y-8">
         <div className="bg-slate-800 p-6 rounded-xl border border-slate-700">
-          <h2 className="text-2xl font-bold text-white mb-4">Asignación de Personal y Servicios</h2>
+          <h2 className="text-2xl font-bold text-white mb-4">Asignación de personal y servicios</h2>
           <div className="flex gap-4 mb-6">
           <select 
             value={selectedPersonal}
@@ -355,9 +355,9 @@ export default function ContratoDetailPage() {
               <thead className="bg-slate-900">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase">Participante</th>
-                  <th className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase">Servicios Asignados</th>
-                  <th className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase">Estado Asistencia</th>
-                  <th className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase">Hora Llegada</th>
+                  <th className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase">Servicios asignados</th>
+                  <th className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase">Estado de asistencia</th>
+                  <th className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase">Hora de llegada</th>
                   <th className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase">Acciones</th>
                 </tr>
               </thead>
@@ -393,7 +393,7 @@ export default function ContratoDetailPage() {
                     </td>
                     <td className="px-6 py-4 align-top text-sm">
                       <button onClick={() => handleOpenModal(p.id)} className="flex items-center gap-2 text-sky-400 hover:text-sky-300 font-semibold disabled:text-slate-500 disabled:cursor-not-allowed" disabled={contrato.estado === 'COMPLETADO' || contrato.estado_asignacion === 'COMPLETO'}>
-                        <FiPlus /> Asignar Servicio
+                        <FiPlus /> Asignar servicio
                       </button>
                     </td>
                   </tr>

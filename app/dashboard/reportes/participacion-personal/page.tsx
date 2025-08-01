@@ -161,7 +161,7 @@ export default function ParticipacionPersonalReportePage() {
 
   return (
     <div className="p-4 md:p-6 lg:p-8">
-      <h1 className="text-3xl font-bold text-white mb-6">Reporte de Participación por Personal</h1>
+      <h1 className="text-3xl font-bold text-white mb-6">Reporte de participación por personal</h1>
 
       <div className="bg-slate-800 rounded-xl shadow-lg p-6 border border-slate-700 mb-8">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
@@ -180,7 +180,7 @@ export default function ParticipacionPersonalReportePage() {
             </select>
           </div>
           <div>
-            <label htmlFor="start-date" className="block text-sm font-medium text-slate-400 mb-1 flex items-center"><FiCalendar className="mr-2"/>Fecha Inicio</label>
+            <label htmlFor="start-date" className="block text-sm font-medium text-slate-400 mb-1 flex items-center"><FiCalendar className="mr-2"/>Fecha de inicio</label>
             <input
               type="date"
               id="start-date"
@@ -190,7 +190,7 @@ export default function ParticipacionPersonalReportePage() {
             />
           </div>
           <div>
-            <label htmlFor="end-date" className="block text-sm font-medium text-slate-400 mb-1 flex items-center"><FiCalendar className="mr-2"/>Fecha Fin</label>
+            <label htmlFor="end-date" className="block text-sm font-medium text-slate-400 mb-1 flex items-center"><FiCalendar className="mr-2"/>Fecha de fin</label>
             <input
               type="date"
               id="end-date"
@@ -205,7 +205,7 @@ export default function ParticipacionPersonalReportePage() {
               disabled={loading}
               className="w-full flex items-center justify-center bg-sky-600 hover:bg-sky-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-colors duration-200 disabled:bg-slate-600"
             >
-              {loading ? 'Generando...' : <><FiSearch className="mr-2" /> Generar Reporte</>}</button>
+              {loading ? 'Generando...' : <><FiSearch className="mr-2" /> Generar reporte</>}</button>
           </div>
         </div>
         {error && <p className="text-red-400 mt-4">{error}</p>}
@@ -215,7 +215,7 @@ export default function ParticipacionPersonalReportePage() {
       {reportData.length > 0 && (
         <div className="mb-8">
             <div className="flex justify-between items-center mb-4">
-                <h2 className="text-2xl font-bold text-white">Resumen de Asistencia</h2>
+                <h2 className="text-2xl font-bold text-white">Resumen de asistencia</h2>
                 <button 
                     onClick={handleExport}
                     className="flex items-center bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-colors duration-200">
@@ -263,7 +263,7 @@ export default function ParticipacionPersonalReportePage() {
               <div className="flex items-center text-white">
                 <FiCalendar className="mr-2 text-slate-400"/>
                 <div>
-                  <p className="text-sm text-slate-400">Fecha del Evento</p>
+                  <p className="text-sm text-slate-400">Fecha del evento</p>
                   <p className="font-semibold">{new Date(contrato.fecha_hora_evento).toLocaleString()}</p>
                 </div>
               </div>
@@ -277,13 +277,13 @@ export default function ParticipacionPersonalReportePage() {
             </div>
             
             <div>
-              <h4 className="text-lg font-semibold text-white mb-2 flex items-center"><FiList className="mr-2 text-slate-400"/>Servicios Realizados</h4>
+              <h4 className="text-lg font-semibold text-white mb-2 flex items-center"><FiList className="mr-2 text-slate-400"/>Servicios realizados</h4>
               <div className="overflow-x-auto">
                 <table className="min-w-full text-left text-sm text-slate-300">
                   <thead className="bg-slate-900">
                     <tr>
                       <th className="px-4 py-2 font-semibold text-slate-400 uppercase tracking-wider">Servicio</th>
-                      <th className="px-4 py-2 font-semibold text-slate-400 uppercase tracking-wider text-right">Monto Pactado</th>
+                      <th className="px-4 py-2 font-semibold text-slate-400 uppercase tracking-wider text-right">Monto pactado</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-700">

@@ -148,7 +148,7 @@ export default function PagosPersonalReportePage() {
 
   return (
     <div className="p-4 md:p-6 lg:p-8">
-      <h1 className="text-3xl font-bold text-white mb-6">Reporte de Pagos por Personal</h1>
+      <h1 className="text-3xl font-bold text-white mb-6">Reporte de pagos por personal</h1>
 
       <div className="bg-slate-800 rounded-xl shadow-lg p-6 border border-slate-700 mb-8">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
@@ -167,7 +167,7 @@ export default function PagosPersonalReportePage() {
             </select>
           </div>
           <div>
-            <label htmlFor="start-date" className="block text-sm font-medium text-slate-400 mb-1">Fecha Inicio</label>
+            <label htmlFor="start-date" className="block text-sm font-medium text-slate-400 mb-1">Fecha de inicio</label>
             <input
               type="date"
               id="start-date"
@@ -177,7 +177,7 @@ export default function PagosPersonalReportePage() {
             />
           </div>
           <div>
-            <label htmlFor="end-date" className="block text-sm font-medium text-slate-400 mb-1">Fecha Fin</label>
+            <label htmlFor="end-date" className="block text-sm font-medium text-slate-400 mb-1">Fecha de fin</label>
             <input
               type="date"
               id="end-date"
@@ -192,7 +192,7 @@ export default function PagosPersonalReportePage() {
               disabled={loading}
               className="w-full flex items-center justify-center bg-sky-600 hover:bg-sky-700 text-white font-bold py-2 px-4 rounded-lg shadow-md transition-colors duration-200 disabled:bg-slate-600"
             >
-              {loading ? 'Generando...' : <><FiSearch className="mr-2" /> Generar Reporte</>}</button>
+              {loading ? 'Generando...' : <><FiSearch className="mr-2" /> Generar reporte</>}</button>
           </div>
         </div>
         {error && <p className="text-red-400 mt-4">{error}</p>}
@@ -216,11 +216,11 @@ export default function PagosPersonalReportePage() {
           <div key={lote.id} className="bg-slate-800 rounded-xl shadow-lg p-6 border border-slate-700">
             <div className="flex justify-between items-center mb-4">
               <div>
-                <p className="text-slate-400 text-sm">Lote de Pago #{lote.id}</p>
+                <p className="text-slate-400 text-sm">Lote de pago #{lote.id}</p>
                 <p className="text-white font-semibold">{new Date(lote.fecha_pago + 'T00:00:00').toLocaleDateString()}</p>
               </div>
               <div className="text-right">
-                <p className="text-slate-400 text-sm">Monto Total Pagado</p>
+                <p className="text-slate-400 text-sm">Monto total pagado</p>
                 <p className="text-2xl font-bold text-green-400">S/{lote.monto_total.toFixed(2)}</p>
               </div>
             </div>
@@ -228,8 +228,8 @@ export default function PagosPersonalReportePage() {
               <table className="min-w-full text-left text-sm text-slate-300">
                 <thead className="bg-slate-900">
                   <tr>
-                    <th className="px-4 py-2 font-semibold text-slate-400 uppercase tracking-wider">Servicio Pagado</th>
-                    <th className="px-4 py-2 font-semibold text-slate-400 uppercase tracking-wider text-right">Monto Pagado</th>
+                    <th className="px-4 py-2 font-semibold text-slate-400 uppercase tracking-wider">Servicio pagado</th>
+                    <th className="px-4 py-2 font-semibold text-slate-400 uppercase tracking-wider text-right">Monto pagado</th>
                     <th className="px-4 py-2 font-semibold text-slate-400 uppercase tracking-wider text-center">Observaciones</th>
                   </tr>
                 </thead>

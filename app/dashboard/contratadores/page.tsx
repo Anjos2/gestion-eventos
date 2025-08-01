@@ -51,14 +51,14 @@ const AddContratadorForm = ({ onAddContratador }: { onAddContratador: (contratad
 
   return (
     <div className="bg-slate-800 p-6 rounded-xl shadow-lg mb-8 border border-slate-700">
-      <h2 className="text-2xl font-bold text-white mb-4">Añadir Nuevo Contratador</h2>
+      <h2 className="text-2xl font-bold text-white mb-4">Añadir nuevo contratador</h2>
       <form onSubmit={handleSubmit} className="grid md:grid-cols-4 gap-4 items-end">
         <div className="md:col-span-2">
-          <label htmlFor="nombre" className="block text-sm font-medium text-slate-400 mb-1">Nombre o Razón Social</label>
+          <label htmlFor="nombre" className="block text-sm font-medium text-slate-400 mb-1">Nombre o razón social</label>
           <input id="nombre" type="text" value={nombre} onChange={(e) => setNombre(e.target.value)} className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white" placeholder="Ej: Empresa XYZ S.A.C." />
         </div>
         <div>
-          <label htmlFor="tipo_documento" className="block text-sm font-medium text-slate-400 mb-1">Tipo de Documento</label>
+          <label htmlFor="tipo_documento" className="block text-sm font-medium text-slate-400 mb-1">Tipo de documento</label>
           <select id="tipo_documento" value={tipoDocumento} onChange={(e) => setTipoDocumento(e.target.value)} className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white">
             <option>DNI</option>
             <option>RUC</option>
@@ -66,10 +66,10 @@ const AddContratadorForm = ({ onAddContratador }: { onAddContratador: (contratad
           </select>
         </div>
         <div>
-          <label htmlFor="numero_documento" className="block text-sm font-medium text-slate-400 mb-1">Número de Documento</label>
+          <label htmlFor="numero_documento" className="block text-sm font-medium text-slate-400 mb-1">Número de documento</label>
           <input id="numero_documento" type="text" value={numeroDocumento} onChange={(e) => setNumeroDocumento(e.target.value)} className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white" placeholder="12345678" />
         </div>
-        <button type="submit" className="w-full md:w-auto justify-self-start px-6 py-2 bg-sky-600 text-white font-semibold rounded-lg hover:bg-sky-700">Añadir Contratador</button>
+        <button type="submit" className="w-full md:w-auto justify-self-start px-6 py-2 bg-sky-600 text-white font-semibold rounded-lg hover:bg-sky-700">Añadir contratador</button>
       </form>
     </div>
   );
@@ -201,7 +201,7 @@ function ContratadoresPageContent() {
 
   return (
     <div>
-      <h1 className="text-3xl font-bold text-white mb-6">Gestión de Contratadores</h1>
+      <h1 className="text-3xl font-bold text-white mb-6">Gestión de contratadores</h1>
       <AddContratadorForm onAddContratador={handleAddContratador} />
       <ContratadoresTable contratadores={contratadores} onToggleStatus={handleToggleStatus} />
       <Pagination

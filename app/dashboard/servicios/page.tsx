@@ -35,17 +35,17 @@ const AddServicioForm = ({ onAddServicio }: { onAddServicio: (servicio: Omit<Ser
 
   return (
     <div className="bg-slate-800 p-6 rounded-xl shadow-lg mb-8 border border-slate-700">
-      <h2 className="text-2xl font-bold text-white mb-4">Añadir Nuevo Servicio</h2>
+      <h2 className="text-2xl font-bold text-white mb-4">Añadir nuevo servicio</h2>
       <form onSubmit={handleSubmit} className="grid md:grid-cols-3 gap-4 items-end">
         <div className="md:col-span-1">
-          <label htmlFor="nombre" className="block text-sm font-medium text-slate-400 mb-1">Nombre del Servicio</label>
+          <label htmlFor="nombre" className="block text-sm font-medium text-slate-400 mb-1">Nombre del servicio</label>
           <input id="nombre" type="text" value={nombre} onChange={(e) => setNombre(e.target.value)} className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white" placeholder="Ej: Fotografía" />
         </div>
         <div>
-          <label htmlFor="monto_base" className="block text-sm font-medium text-slate-400 mb-1">Monto Base (S/.)</label>
+          <label htmlFor="monto_base" className="block text-sm font-medium text-slate-400 mb-1">Monto base (S/.)</label>
           <input id="monto_base" type="number" value={montoBase} onChange={(e) => setMontoBase(e.target.value)} className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white" placeholder="250.00" step="0.01" />
         </div>
-        <button type="submit" className="w-full md:w-auto justify-self-start px-6 py-2 bg-sky-600 text-white font-semibold rounded-lg hover:bg-sky-700">Añadir Servicio</button>
+        <button type="submit" className="w-full md:w-auto justify-self-start px-6 py-2 bg-sky-600 text-white font-semibold rounded-lg hover:bg-sky-700">Añadir servicio</button>
       </form>
     </div>
   );
@@ -177,7 +177,7 @@ function ServiciosPageContent() {
 
   return (
     <div>
-      <h1 className="text-3xl font-bold text-white mb-6">Gestión de Servicios</h1>
+      <h1 className="text-3xl font-bold text-white mb-6">Gestión de servicios</h1>
       <AddServicioForm onAddServicio={handleAddServicio} />
       <ServiciosTable servicios={servicios} onToggleStatus={handleToggleStatus} />
       <Pagination
