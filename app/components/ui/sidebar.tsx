@@ -60,15 +60,21 @@ export default function Sidebar() {
 
           const { data: personal, error } = await supabase
             .from('Personal')
-            .select('rol, Organizaciones:id_organizacion (nombre)')
+            .select('rol, Organizaciones!id_organizacion(nombre)') // Query explícita
             .eq('supabase_user_id', user.id)
             .single();
 
           if (error) throw new Error('No se pudo obtener la información del usuario.');
           if (personal) {
             setUserRole(personal.rol as UserRole);
-            if (personal.Organizaciones) {
-              setOrgName(personal.Organizaciones.nombre);
+            const orgData = personal.Organizaciones;
+            if (orgData) {
+              // Comprobación robusta para manejar objeto o array
+              if (Array.isArray(orgData) && orgData.length > 0) {
+                setOrgName(orgData[0].nombre);
+              } else if (!Array.isArray(orgData)) {
+                setOrgName((orgData as any).nombre);
+              }
             }
           }
         }

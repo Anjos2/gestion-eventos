@@ -36,10 +36,29 @@ export default function GestionLotesPage() {
         .in('estado', ['PENDIENTE_APROBACION', 'RECLAMADO']);
       if (lotesError) throw new Error(lotesError.message);
 
-      const formattedLotes = lotesData.map(lote => ({
-        id: lote.id, monto_total: lote.monto_total, estado: lote.estado, 
-        personal_nombre: lote.Personal?.nombre || 'N/A', id_personal: lote.Personal?.id || 0
-      }));
+      const formattedLotes = lotesData.map(lote => {
+        const personalData = lote.Personal;
+        let personal_nombre = 'N/A';
+        let id_personal = 0;
+
+        if (personalData) {
+          if (Array.isArray(personalData) && personalData.length > 0) {
+            personal_nombre = personalData[0].nombre;
+            id_personal = personalData[0].id;
+          } else if (!Array.isArray(personalData)) {
+            personal_nombre = (personalData as any).nombre;
+            id_personal = (personalData as any).id;
+          }
+        }
+
+        return {
+          id: lote.id,
+          monto_total: lote.monto_total,
+          estado: lote.estado,
+          personal_nombre,
+          id_personal,
+        };
+      });
       setLotesEnGestion(formattedLotes);
 
     } catch (err: any) {

@@ -29,12 +29,18 @@ export default function SuperAdminPage() {
       console.error('Error fetching organizaciones:', error);
       alert('Error al cargar las organizaciones.');
     } else {
+      // Helper para manejar la posible inconsistencia de Supabase (objeto vs array)
+      const getSingle = (data: any) => (Array.isArray(data) ? data[0] : data);
+
       // Aplanar la estructura de los datos para la relación uno a uno
-      const aplanado = data.map(org => ({
-        ...org,
-        conteo_registros_nuevos: org.Contadores_Uso?.conteo_registros_nuevos ?? 0,
-      }));
-      setOrganizaciones(aplanado);
+      const aplanado = data.map(org => {
+        const contador = getSingle(org.Contadores_Uso);
+        return {
+          ...org,
+          conteo_registros_nuevos: contador?.conteo_registros_nuevos ?? 0,
+        };
+      });
+      setOrganizaciones(aplanado as Organizacion[]);
     }
     setLoading(false);
   };

@@ -84,6 +84,8 @@ export default function RentabilidadContratoReportePage() {
     setError(null);
     setReportData([]);
 
+    const getSingle = (data: any) => (Array.isArray(data) ? data[0] : data);
+
     // 1. Obtener los contratos que cumplen con los filtros
     const { data: contratos, error: contratosError } = await supabase
       .from('Contratos')
@@ -116,7 +118,11 @@ export default function RentabilidadContratoReportePage() {
     const dataMap: { [key: string]: ReportData } = {};
 
     contratos.forEach(contrato => {
-        const nombre = contrato.Tipos_Contrato.nombre;
+        const tipoContrato = getSingle(contrato.Tipos_Contrato);
+        const contratador = getSingle(contrato.Contratadores);
+        if (!tipoContrato || !contratador) return;
+
+        const nombre = tipoContrato.nombre;
         if (!dataMap[nombre]) {
             dataMap[nombre] = {
                 tipoContratoNombre: nombre,
@@ -128,36 +134,45 @@ export default function RentabilidadContratoReportePage() {
                 detallesCosto: [],
             };
         }
-        dataMap[nombre].ingresoTotal += contrato.Tipos_Contrato.ingreso_base;
+        dataMap[nombre].ingresoTotal += tipoContrato.ingreso_base;
         dataMap[nombre].cantidadContratos++;
         dataMap[nombre].detallesIngreso.push({
             id: contrato.id,
             fecha: contrato.fecha_hora_evento,
-            ingreso: contrato.Tipos_Contrato.ingreso_base,
-            contratadorNombre: contrato.Contratadores.nombre,
+            ingreso: tipoContrato.ingreso_base,
+            contratadorNombre: contratador.nombre,
         });
     });
 
     costos.forEach(costo => {
-        const idContrato = costo.Evento_Servicios_Asignados.Participaciones_Personal.Eventos_Contrato.id_contrato;
-        const contrato = contratos.find(c => c.id === idContrato);
-        if (contrato) {
-            const nombre = contrato.Tipos_Contrato.nombre;
+        const eventoAsignado = getSingle(costo.Evento_Servicios_Asignados);
+        const participacion = getSingle(eventoAsignado?.Participaciones_Personal);
+        const eventoContrato = getSingle(participacion?.Eventos_Contrato);
+        const servicio = getSingle(eventoAsignado?.Servicios);
+        const personal = getSingle(participacion?.Personal);
+
+        if (!eventoContrato || !servicio || !personal) return;
+
+        const idContrato = eventoContrato.id_contrato;
+        const contratoOriginal = contratos.find(c => c.id === idContrato);
+        if (contratoOriginal) {
+            const tipoContrato = getSingle(contratoOriginal.Tipos_Contrato);
+            if (!tipoContrato) return;
+
+            const nombre = tipoContrato.nombre;
             dataMap[nombre].costoTotal += costo.monto_pagado;
             dataMap[nombre].detallesCosto.push({
                 contratoId: idContrato,
-                servicioNombre: costo.Evento_Servicios_Asignados.Servicios.nombre,
+                servicioNombre: servicio.nombre,
                 montoPagado: costo.monto_pagado,
-                personalNombre: costo.Evento_Servicios_Asignados.Participaciones_Personal.Personal.nombre,
-                fechaEvento: contrato.fecha_hora_evento,
+                personalNombre: personal.nombre,
+                fechaEvento: contratoOriginal.fecha_hora_evento,
             });
         }
     });
 
     Object.values(dataMap).forEach(d => {
         d.ingresoNeto = d.ingresoTotal - d.costoTotal;
-
-        // Ordenar los desgloses por fecha de evento (más antiguo primero)
         d.detallesIngreso.sort((a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime());
         d.detallesCosto.sort((a, b) => new Date(a.fechaEvento).getTime() - new Date(b.fechaEvento).getTime());
     });

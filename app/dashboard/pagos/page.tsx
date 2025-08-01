@@ -70,23 +70,28 @@ export default function PagosPage() {
 
       if (pagosError) throw new Error(pagosError.message);
 
+      // Helper para acceder a datos que pueden ser objeto o array[0]
+      const getSingle = (data: any) => (Array.isArray(data) ? data[0] : data);
+
       // Ordenar los pagos por fecha de evento (más antiguo primero)
       pagosPendientes.sort((a, b) => {
-        const fechaA = new Date(a.Participaciones_Personal?.Eventos_Contrato?.Contratos?.fecha_hora_evento || 0).getTime();
-        const fechaB = new Date(b.Participaciones_Personal?.Eventos_Contrato?.Contratos?.fecha_hora_evento || 0).getTime();
+        const contratoA = getSingle(getSingle(getSingle(a.Participaciones_Personal)?.Eventos_Contrato)?.Contratos);
+        const contratoB = getSingle(getSingle(getSingle(b.Participaciones_Personal)?.Eventos_Contrato)?.Contratos);
+        const fechaA = new Date(contratoA?.fecha_hora_evento || 0).getTime();
+        const fechaB = new Date(contratoB?.fecha_hora_evento || 0).getTime();
         return fechaA - fechaB;
       });
 
       const agrupados: Record<number, PersonalConPendientes> = {};
 
       pagosPendientes.forEach(pago => {
-        const participacion = pago.Participaciones_Personal;
-        const personal = participacion?.Personal;
-        const contrato = participacion?.Eventos_Contrato?.Contratos;
-        const tipoContrato = contrato?.Tipos_Contrato;
-        const servicio = pago.Servicios;
+        const participacion = getSingle(pago.Participaciones_Personal);
+        const personal = getSingle(participacion?.Personal);
+        const contrato = getSingle(getSingle(participacion?.Eventos_Contrato)?.Contratos);
+        const tipoContrato = getSingle(contrato?.Tipos_Contrato);
+        const servicio = getSingle(pago.Servicios);
 
-        if (personal && contrato && servicio && tipoContrato) {
+        if (personal && contrato && servicio && tipoContrato && participacion) {
           const idPersonal = personal.id;
           if (!agrupados[idPersonal]) {
             agrupados[idPersonal] = {

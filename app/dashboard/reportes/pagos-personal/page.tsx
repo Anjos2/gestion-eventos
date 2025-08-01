@@ -97,7 +97,24 @@ export default function PagosPersonalReportePage() {
     if (error) {
       setError(error.message);
     } else {
-      setReportData(data || []);
+      const getSingle = (data: any) => (Array.isArray(data) ? data[0] : data);
+
+      const formattedData = (data || []).map(lote => ({
+        ...lote,
+        Detalles_Lote_Pago: lote.Detalles_Lote_Pago.map(detalle => {
+          const evento = getSingle(detalle.Evento_Servicios_Asignados);
+          const servicio = evento ? getSingle(evento.Servicios) : null;
+          return {
+            ...detalle,
+            Evento_Servicios_Asignados: {
+              Servicios: {
+                nombre: servicio?.nombre || 'N/A',
+              },
+            },
+          };
+        }),
+      }));
+      setReportData(formattedData);
     }
     setLoading(false);
   };

@@ -1,21 +1,18 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/app/lib/supabase';
 import type { User } from '@supabase/supabase-js';
+import Pagination from '@/app/components/ui/Pagination';
 
-// Interfaces para los datos
-interface Contratador {
-  id: number;
-  nombre: string;
-}
+// --- CONSTANTES ---
+const ITEMS_PER_PAGE = 10;
 
-interface TipoContrato {
-  id: number;
-  nombre: string;
-}
-
+// --- INTERFACES ---
+interface Contratador { id: number; nombre: string; }
+interface TipoContrato { id: number; nombre: string; }
 interface Contrato {
   id: number;
   fecha_hora_evento: string;
@@ -26,16 +23,8 @@ interface Contrato {
   Personal: { nombre: string } | null;
 }
 
-// Componente para el formulario de añadir contrato
-const AddContratoForm = ({
-  contratadores, 
-  tiposContrato, 
-  onAddContrato
-}: {
-  contratadores: Contratador[];
-  tiposContrato: TipoContrato[];
-  onAddContrato: (contrato: Omit<Contrato, 'id' | 'estado' | 'estado_asignacion' | 'Contratadores' | 'Tipos_Contrato' | 'Personal'> & { id_contratador: number; id_tipo_contrato: number }) => void;
-}) => {
+// --- COMPONENTES DE UI ---
+const AddContratoForm = ({ contratadores, tiposContrato, onAddContrato }: { contratadores: Contratador[], tiposContrato: TipoContrato[], onAddContrato: (data: any) => void }) => {
   const [idContratador, setIdContratador] = useState('');
   const [idTipoContrato, setIdTipoContrato] = useState('');
   const [fechaHoraEvento, setFechaHoraEvento] = useState('');
@@ -63,35 +52,34 @@ const AddContratoForm = ({
         <div>
           <label htmlFor="id_contratador" className="block text-sm font-medium text-slate-400 mb-1">Contratador</label>
           <select id="id_contratador" value={idContratador} onChange={(e) => setIdContratador(e.target.value)} className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white">
-            <option value="">Seleccione un contratador</option>
+            <option value="">Seleccione</option>
             {contratadores.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
           </select>
         </div>
         <div>
           <label htmlFor="id_tipo_contrato" className="block text-sm font-medium text-slate-400 mb-1">Tipo de Contrato</label>
           <select id="id_tipo_contrato" value={idTipoContrato} onChange={(e) => setIdTipoContrato(e.target.value)} className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white">
-            <option value="">Seleccione un tipo</option>
+            <option value="">Seleccione</option>
             {tiposContrato.map(tc => <option key={tc.id} value={tc.id}>{tc.nombre}</option>)}
           </select>
         </div>
         <div>
-          <label htmlFor="fecha_hora_evento" className="block text-sm font-medium text-slate-400 mb-1">Fecha y Hora del Evento</label>
+          <label htmlFor="fecha_hora_evento" className="block text-sm font-medium text-slate-400 mb-1">Fecha y Hora</label>
           <input id="fecha_hora_evento" type="datetime-local" value={fechaHoraEvento} onChange={(e) => setFechaHoraEvento(e.target.value)} className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white" />
         </div>
-        <button type="submit" className="w-full md:w-auto justify-self-start px-6 py-2 bg-sky-600 text-white font-semibold rounded-lg shadow-md hover:bg-sky-700">Registrar Contrato</button>
+        <button type="submit" className="w-full md:w-auto justify-self-start px-6 py-2 bg-sky-600 text-white font-semibold rounded-lg hover:bg-sky-700">Registrar</button>
       </form>
     </div>
   );
 };
 
-// Componente para la tabla de contratos
 const ContratosTable = ({ contratos }: { contratos: Contrato[] }) => (
   <div className="bg-slate-800 rounded-xl shadow-lg overflow-hidden border border-slate-700">
     <table className="min-w-full divide-y divide-slate-700">
       <thead className="bg-slate-900">
         <tr>
           <th className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase">Cliente</th>
-          <th className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase">Tipo Contrato</th>
+          <th className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase">Tipo</th>
           <th className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase">Fecha Evento</th>
           <th className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase">Responsable</th>
           <th className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase">Estado</th>
@@ -100,12 +88,12 @@ const ContratosTable = ({ contratos }: { contratos: Contrato[] }) => (
       </thead>
       <tbody className="bg-slate-800 divide-y divide-slate-700">
         {contratos.length > 0 ? contratos.map((c) => (
-          <tr key={c.id} className={`hover:bg-slate-700 cursor-pointer ${c.estado_asignacion === 'PENDIENTE' ? 'bg-yellow-900/20' : ''}`}>
-            <td className="px-6 py-4 text-sm text-white"><Link href={`/dashboard/contratos/${c.id}`}>{c.Contratadores?.nombre}</Link></td>
-            <td className="px-6 py-4 text-sm text-slate-300"><Link href={`/dashboard/contratos/${c.id}`}>{c.Tipos_Contrato?.nombre}</Link></td>
-            <td className="px-6 py-4 text-sm text-slate-300"><Link href={`/dashboard/contratos/${c.id}`}>{new Date(c.fecha_hora_evento).toLocaleString()}</Link></td>
-            <td className="px-6 py-4 text-sm text-slate-300"><Link href={`/dashboard/contratos/${c.id}`}>{c.Personal?.nombre}</Link></td>
-            <td className="px-6 py-4 text-sm"><Link href={`/dashboard/contratos/${c.id}`}><span className="px-3 py-1 text-xs font-semibold rounded-full bg-blue-900 text-blue-200">{c.estado}</span></Link></td>
+          <tr key={c.id} className={`hover:bg-slate-700 ${c.estado_asignacion === 'PENDIENTE' ? 'bg-yellow-900/20' : ''}`}>
+            <td className="px-6 py-4 text-sm text-white"><Link href={`/dashboard/contratos/${c.id}`} className="hover:underline">{c.Contratadores?.nombre}</Link></td>
+            <td className="px-6 py-4 text-sm text-slate-300">{c.Tipos_Contrato?.nombre}</td>
+            <td className="px-6 py-4 text-sm text-slate-300">{new Date(c.fecha_hora_evento).toLocaleString()}</td>
+            <td className="px-6 py-4 text-sm text-slate-300">{c.Personal?.nombre}</td>
+            <td className="px-6 py-4 text-sm"><span className="px-3 py-1 text-xs font-semibold rounded-full bg-blue-900 text-blue-200">{c.estado}</span></td>
             <td className="px-6 py-4 text-sm">
               <span className={`px-3 py-1 text-xs font-semibold rounded-full ${c.estado_asignacion === 'COMPLETO' ? 'bg-green-900 text-green-200' : 'bg-yellow-900 text-yellow-200'}`}>
                 {c.estado_asignacion}
@@ -120,23 +108,18 @@ const ContratosTable = ({ contratos }: { contratos: Contrato[] }) => (
   </div>
 );
 
-import Pagination from '@/app/components/ui/Pagination';
-
-// ... (interfaces sin cambios)
-
-// Componente principal
-export default function ContratosPage() {
+// --- COMPONENTE DE LÓGICA Y CARGA DE DATOS ---
+function ContratosPageContent() {
+  const searchParams = useSearchParams();
   const [user, setUser] = useState<User | null>(null);
   const [contratos, setContratos] = useState<Contrato[]>([]);
   const [contratadores, setContratadores] = useState<Contratador[]>([]);
   const [tiposContrato, setTiposContrato] = useState<TipoContrato[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  // Estado para la paginación
-  const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
-  const ITEMS_PER_PAGE = 10;
+
+  const currentPage = parseInt(searchParams.get('page') || '1', 10);
 
   const fetchContratos = useCallback(async (orgId: number, page: number) => {
     const from = (page - 1) * ITEMS_PER_PAGE;
@@ -150,7 +133,6 @@ export default function ContratosPage() {
       .range(from, to);
 
     if (error) {
-      console.error('Error fetching contratos:', error);
       setError(error.message);
       setContratos([]);
     } else {
@@ -181,7 +163,7 @@ export default function ContratosPage() {
 
         setContratadores(contratadoresRes.data || []);
         setTiposContrato(tiposContratoRes.data || []);
-        fetchContratos(orgId, currentPage);
+        await fetchContratos(orgId, currentPage);
 
       } catch (err: any) {
         setError(err.message);
@@ -192,52 +174,31 @@ export default function ContratosPage() {
     fetchInitialData();
   }, [fetchContratos, currentPage]);
 
-  const handleAddContrato = async (contratoData: Omit<Contrato, 'id' | 'estado' | 'estado_asignacion' | 'Contratadores' | 'Tipos_Contrato' | 'Personal'> & { id_contratador: number; id_tipo_contrato: number }) => {
+  const handleAddContrato = async (contratoData: any) => {
     if (!user) return;
     try {
       const { data: adminData } = await supabase.from('Personal').select('id, id_organizacion').eq('supabase_user_id', user.id).single();
       if (!adminData) throw new Error('No se pudo obtener el perfil del admin.');
 
-      const { data: newContrato, error: contratoError } = await supabase.from('Contratos').insert({
-        ...contratoData,
-        id_organizacion: adminData.id_organizacion,
-        id_personal_administrativo: adminData.id,
-        created_by: adminData.id,
-        estado: 'ACTIVO',
-        estado_asignacion: 'PENDIENTE',
-      }).select('id').single();
-
+      const { data: newContrato, error: contratoError } = await supabase.from('Contratos').insert({ ...contratoData, id_organizacion: adminData.id_organizacion, id_personal_administrativo: adminData.id, created_by: adminData.id, estado: 'ACTIVO', estado_asignacion: 'PENDIENTE' }).select('id').single();
       if (contratoError) throw contratoError;
       if (!newContrato) throw new Error('No se pudo obtener el ID del nuevo contrato.');
 
-      const { error: eventoError } = await supabase.from('Eventos_Contrato').insert({
-        id_contrato: newContrato.id,
-        id_organizacion: adminData.id_organizacion,
-      });
-
+      const { error: eventoError } = await supabase.from('Eventos_Contrato').insert({ id_contrato: newContrato.id, id_organizacion: adminData.id_organizacion });
       if (eventoError) {
         await supabase.from('Contratos').delete().eq('id', newContrato.id);
         throw eventoError;
       }
 
-      if (currentPage !== 1) {
-        setCurrentPage(1);
-      } else {
-        fetchContratos(adminData.id_organizacion, 1);
-      }
-
+      await fetchContratos(adminData.id_organizacion, 1);
       alert('Contrato y evento registrados con éxito!');
     } catch (err: any) {
       alert(`Error al registrar el contrato: ${err.message}`);
     }
   };
 
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-  };
-
-  if (loading) return <p>Cargando...</p>;
-  if (error) return <p>Error: {error}</p>;
+  if (loading) return <div className="flex justify-center items-center h-64"><p className="text-lg text-slate-400">Cargando datos...</p></div>;
+  if (error) return <div className="bg-red-900 border border-red-700 text-red-200 px-4 py-3 rounded-lg"><p>{error}</p></div>;
 
   return (
     <div>
@@ -248,8 +209,17 @@ export default function ContratosPage() {
         currentPage={currentPage} 
         totalCount={totalCount} 
         itemsPerPage={ITEMS_PER_PAGE} 
-        onPageChange={handlePageChange} 
+        path="/dashboard/contratos"
       />
     </div>
+  );
+}
+
+// --- COMPONENTE PRINCIPAL DE LA PÁGINA (con Suspense) ---
+export default function ContratosPage() {
+  return (
+    <Suspense fallback={<div className="flex justify-center items-center h-64"><p className="text-lg text-slate-400">Cargando página...</p></div>}>
+      <ContratosPageContent />
+    </Suspense>
   );
 }

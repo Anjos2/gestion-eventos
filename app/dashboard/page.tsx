@@ -90,7 +90,7 @@ export default function DashboardPage() {
 
         } else { // ADMINISTRATIVO o ADMINISTRATIVO_APOYO
           const orgId = personalData.id_organizacion;
-          const orgName = personalData.Organizaciones.nombre;
+          const orgName = (personalData.Organizaciones as any).nombre;
 
           const today = new Date();
           const last30Days = new Date(new Date().setDate(today.getDate() - 30)).toISOString();
@@ -104,11 +104,29 @@ export default function DashboardPage() {
             supabase.from('Contratos').select('id', { count: 'exact', head: true }).eq('id_organizacion', orgId).eq('estado_asignacion', 'PENDIENTE').eq('estado', 'ACTIVO'),
             supabase.from('Lotes_Pago').select('id', { count: 'exact', head: true }).eq('id_organizacion', orgId).eq('estado', 'PENDIENTE_APROBACION'),
             supabase.from('Contratos').select('id', { count: 'exact', head: true }).eq('id_organizacion', orgId).eq('estado', 'COMPLETADO').gte('updated_at', last30Days),
-            supabase.from('Contratos').select('id, fecha_hora_evento, Contratadores(nombre)').eq('id_organizacion', orgId).eq('estado', 'ACTIVO').order('fecha_hora_evento', { ascending: true }).limit(1).single()
+            supabase.from('Contratos').select('id, fecha_hora_evento, id_contratador').eq('id_organizacion', orgId).eq('estado', 'ACTIVO').order('fecha_hora_evento', { ascending: true }).limit(1)
           ]);
 
-          if (proximoEventoRes.error && proximoEventoRes.error.code !== 'PGRST116') {
+          if (proximoEventoRes.error) {
               throw new Error(`Próximo evento: ${proximoEventoRes.error.message}`);
+          }
+
+          let proximoEventoData = null;
+          if (proximoEventoRes.data && proximoEventoRes.data.length > 0) {
+            const primerEvento = proximoEventoRes.data[0];
+            const { data: contratadorData, error: contratadorError } = await supabase
+              .from('Contratadores')
+              .select('nombre')
+              .eq('id', primerEvento.id_contratador)
+              .single();
+
+            if (!contratadorError && contratadorData) {
+              proximoEventoData = {
+                id: primerEvento.id,
+                contratador: contratadorData.nombre,
+                fecha: new Date(primerEvento.fecha_hora_evento).toLocaleString('es-ES', { dateStyle: 'full', timeStyle: 'short' })
+              };
+            }
           }
 
           setAdminStats({
@@ -116,11 +134,7 @@ export default function DashboardPage() {
             contratosPorConfirmar: contratosPorConfirmarRes.count || 0,
             pagosPendientesAprobacion: pagosPendientesAprobacionRes.count || 0,
             contratosCompletadosMes: contratosCompletadosMesRes.count || 0,
-            proximoEvento: proximoEventoRes.data ? {
-              id: proximoEventoRes.data.id,
-              contratador: proximoEventoRes.data.Contratadores.nombre,
-              fecha: new Date(proximoEventoRes.data.fecha_hora_evento).toLocaleString('es-ES', { dateStyle: 'full', timeStyle: 'short' })
-            } : null
+            proximoEvento: proximoEventoData
           });
         }
 
