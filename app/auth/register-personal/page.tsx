@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { supabase } from '@/app/lib/supabase';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { FiUser, FiLock, FiMail } from 'react-icons/fi';
 
-export default function RegisterOperativePage() {
+function RegisterPersonalForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -135,4 +135,12 @@ export default function RegisterOperativePage() {
       </div>
     </div>
   );
+}
+
+export default function RegisterOperativePage() {
+    return (
+        <Suspense fallback={<div>Cargando...</div>}>
+            <RegisterPersonalForm />
+        </Suspense>
+    )
 }
