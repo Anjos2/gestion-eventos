@@ -6,12 +6,12 @@ import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/app/lib/supabase';
 import type { User } from '@supabase/supabase-js';
 import Pagination from '@/app/components/ui/Pagination';
+import AsyncSelect from 'react-select/async';
 
 // --- CONSTANTES ---
 const ITEMS_PER_PAGE = 10;
 
 // --- INTERFACES ---
-interface Contratador { id: number; nombre: string; }
 interface TipoContrato { id: number; nombre: string; }
 interface Contrato {
   id: number;
@@ -22,10 +22,56 @@ interface Contrato {
   Tipos_Contrato: { nombre: string } | null;
   Personal: { nombre: string } | null;
 }
+interface SelectOption { value: number; label: string; }
+
+// --- ESTILOS PERSONALIZADOS para React-Select ---
+const selectStyles = {
+  control: (provided: any) => ({
+    ...provided,
+    backgroundColor: '#374151', // bg-slate-700
+    borderColor: '#4b5563', // border-slate-600
+    color: 'white',
+    minHeight: '42px',
+  }),
+  menu: (provided: any) => ({
+    ...provided,
+    backgroundColor: '#1f2937', // bg-slate-800
+    borderColor: '#4b5563', // border-slate-600
+  }),
+  option: (provided: any, state: { isSelected: boolean; isFocused: boolean; }) => ({
+    ...provided,
+    backgroundColor: state.isSelected ? '#0ea5e9' : state.isFocused ? '#374151' : '#1f2937',
+    color: 'white',
+    ':active': {
+      backgroundColor: '#374151',
+    },
+  }),
+  singleValue: (provided: any) => ({
+    ...provided,
+    color: 'white',
+  }),
+  input: (provided: any) => ({
+    ...provided,
+    color: 'white',
+  }),
+  placeholder: (provided: any) => ({
+    ...provided,
+    color: '#9ca3af', // text-slate-400
+  }),
+};
+
 
 // --- COMPONENTES DE UI ---
-const AddContratoForm = ({ contratadores, tiposContrato, onAddContrato }: { contratadores: Contratador[], tiposContrato: TipoContrato[], onAddContrato: (data: any) => void }) => {
-  const [idContratador, setIdContratador] = useState('');
+const AddContratoForm = ({ 
+  loadContratadores, 
+  tiposContrato,
+  onAddContrato 
+}: { 
+  loadContratadores: (inputValue: string, callback: (options: SelectOption[]) => void) => void, 
+  tiposContrato: TipoContrato[],
+  onAddContrato: (data: any) => void 
+}) => {
+  const [idContratador, setIdContratador] = useState<SelectOption | null>(null);
   const [idTipoContrato, setIdTipoContrato] = useState('');
   const [fechaHoraEvento, setFechaHoraEvento] = useState('');
 
@@ -36,11 +82,11 @@ const AddContratoForm = ({ contratadores, tiposContrato, onAddContrato }: { cont
       return;
     }
     onAddContrato({ 
-      id_contratador: parseInt(idContratador),
+      id_contratador: idContratador.value,
       id_tipo_contrato: parseInt(idTipoContrato),
       fecha_hora_evento: new Date(fechaHoraEvento).toISOString(),
     });
-    setIdContratador('');
+    setIdContratador(null);
     setIdTipoContrato('');
     setFechaHoraEvento('');
   };
@@ -51,14 +97,21 @@ const AddContratoForm = ({ contratadores, tiposContrato, onAddContrato }: { cont
       <form onSubmit={handleSubmit} className="grid md:grid-cols-4 gap-4 items-end">
         <div>
           <label htmlFor="id_contratador" className="block text-sm font-medium text-slate-400 mb-1">Contratador</label>
-          <select id="id_contratador" value={idContratador} onChange={(e) => setIdContratador(e.target.value)} className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white">
-            <option value="">Seleccione</option>
-            {contratadores.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-          </select>
+          <AsyncSelect
+            id="id_contratador"
+            value={idContratador}
+            onChange={(option) => setIdContratador(option as SelectOption)}
+            loadOptions={loadContratadores}
+            placeholder="Busque un contratador..."
+            cacheOptions
+            defaultOptions
+            styles={selectStyles}
+            classNamePrefix="react-select"
+          />
         </div>
         <div>
           <label htmlFor="id_tipo_contrato" className="block text-sm font-medium text-slate-400 mb-1">Tipo de contrato</label>
-          <select id="id_tipo_contrato" value={idTipoContrato} onChange={(e) => setIdTipoContrato(e.target.value)} className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white">
+          <select id="id_tipo_contrato" value={idTipoContrato} onChange={(e) => setIdTipoContrato(e.target.value)} className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white h-[42px]">
             <option value="">Seleccione</option>
             {tiposContrato.map(tc => <option key={tc.id} value={tc.id}>{tc.nombre}</option>)}
           </select>
@@ -113,11 +166,11 @@ function ContratosPageContent() {
   const searchParams = useSearchParams();
   const [user, setUser] = useState<User | null>(null);
   const [contratos, setContratos] = useState<Contrato[]>([]);
-  const [contratadores, setContratadores] = useState<Contratador[]>([]);
   const [tiposContrato, setTiposContrato] = useState<TipoContrato[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [totalCount, setTotalCount] = useState(0);
+  const [orgId, setOrgId] = useState<number | null>(null);
 
   const currentPage = parseInt(searchParams.get('page') || '1', 10);
 
@@ -141,6 +194,26 @@ function ContratosPageContent() {
     }
   }, []);
 
+  const loadContratadores = async (inputValue: string, callback: (options: SelectOption[]) => void) => {
+    if (!orgId) return callback([]);
+
+    const { data, error } = await supabase
+      .from('Contratadores')
+      .select('id, nombre')
+      .eq('id_organizacion', orgId)
+      .eq('es_activo', true)
+      .ilike('nombre', `%${inputValue}%`)
+      .limit(20);
+
+    if (error) {
+      console.error('Error buscando contratadores:', error);
+      return callback([]);
+    }
+
+    const options = data.map(c => ({ value: c.id, label: c.nombre }));
+    callback(options);
+  };
+
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
@@ -151,19 +224,13 @@ function ContratosPageContent() {
 
         const { data: adminData } = await supabase.from('Personal').select('id_organizacion').eq('supabase_user_id', user.id).single();
         if (!adminData) throw new Error('No se encontró la organización del admin.');
-        const orgId = adminData.id_organizacion;
+        setOrgId(adminData.id_organizacion);
 
-        const [contratadoresRes, tiposContratoRes] = await Promise.all([
-          supabase.from('Contratadores').select('id, nombre').eq('id_organizacion', orgId).eq('es_activo', true),
-          supabase.from('Tipos_Contrato').select('id, nombre').eq('id_organizacion', orgId).eq('es_activo', true),
-        ]);
+        const { data: tiposContratoRes, error: tiposContratoError } = await supabase.from('Tipos_Contrato').select('id, nombre').eq('id_organizacion', adminData.id_organizacion).eq('es_activo', true);
+        if (tiposContratoError) throw tiposContratoError;
+        setTiposContrato(tiposContratoRes || []);
 
-        if (contratadoresRes.error) throw contratadoresRes.error;
-        if (tiposContratoRes.error) throw tiposContratoRes.error;
-
-        setContratadores(contratadoresRes.data || []);
-        setTiposContrato(tiposContratoRes.data || []);
-        await fetchContratos(orgId, currentPage);
+        await fetchContratos(adminData.id_organizacion, currentPage);
 
       } catch (err: any) {
         setError(err.message);
@@ -203,7 +270,11 @@ function ContratosPageContent() {
   return (
     <div>
       <h1 className="text-3xl font-bold text-white mb-6">Gestión de contratos</h1>
-      <AddContratoForm contratadores={contratadores} tiposContrato={tiposContrato} onAddContrato={handleAddContrato} />
+      <AddContratoForm 
+        loadContratadores={loadContratadores} 
+        tiposContrato={tiposContrato} 
+        onAddContrato={handleAddContrato} 
+      />
       <ContratosTable contratos={contratos} />
       <Pagination 
         currentPage={currentPage} 

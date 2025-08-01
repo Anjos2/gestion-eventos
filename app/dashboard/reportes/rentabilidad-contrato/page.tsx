@@ -190,38 +190,67 @@ export default function RentabilidadContratoReportePage() {
     const wb = XLSX.utils.book_new();
 
     reportData.forEach(data => {
-      const summaryData = [{
-        'Tipo de Contrato': data.tipoContratoNombre,
-        'Cantidad de Contratos': data.cantidadContratos,
-        'Ingreso Total': data.ingresoTotal,
-        'Costo Total': data.costoTotal,
-        'Ingreso Neto': data.ingresoNeto,
-      }];
+      // 1. Preparar datos
+      const title = `Reporte de Rentabilidad: ${data.tipoContratoNombre}`;
+      const dateRange = `Período: ${new Date(startDate).toLocaleDateString()} - ${new Date(endDate).toLocaleDateString()}`;
+      
+      const summary = [
+        { Key: 'Contratos en el período', Value: data.cantidadContratos },
+        { Key: 'Ingreso Total', Value: `S/${data.ingresoTotal.toFixed(2)}` },
+        { Key: 'Costo Total', Value: `S/${data.costoTotal.toFixed(2)}` },
+        { Key: 'Ingreso Neto', Value: `S/${data.ingresoNeto.toFixed(2)}` },
+      ];
 
       const ingresosData = data.detallesIngreso.map(ingreso => ({
         'Contrato ID': ingreso.id,
         'Contratador': ingreso.contratadorNombre,
         'Fecha Evento': new Date(ingreso.fecha).toLocaleString(),
-        'Ingreso': ingreso.ingreso,
+        'Ingreso': { v: ingreso.ingreso, t: 'n', z: '"S/"#,##0.00' },
       }));
 
       const costosData = data.detallesCosto.map(costo => ({
-        'Contrato ID': costo.contratoId,
+        'Contrato ID ': costo.contratoId, // Espacio para diferenciar de la otra tabla
         'Personal': costo.personalNombre,
         'Servicio': costo.servicioNombre,
-        'Fecha Evento': new Date(costo.fechaEvento).toLocaleString(),
-        'Costo': costo.montoPagado,
+        'Fecha Evento ': new Date(costo.fechaEvento).toLocaleString(), // Espacio
+        'Costo': { v: costo.montoPagado, t: 'n', z: '"S/"#,##0.00' },
       }));
 
-      const ws = XLSX.utils.json_to_sheet(summaryData);
-      XLSX.utils.sheet_add_json(ws, [{}], {header: [], skipHeader: true, origin: -1}); // Spacer
-      XLSX.utils.sheet_add_json(ws, [{A: "Desglose de Ingresos"}], {header: ["A"], skipHeader: true, origin: -1});
-      XLSX.utils.sheet_add_json(ws, ingresosData, {origin: -1});
-      XLSX.utils.sheet_add_json(ws, [{}], {header: [], skipHeader: true, origin: -1}); // Spacer
-      XLSX.utils.sheet_add_json(ws, [{A: "Desglose de Costos"}], {header: ["A"], skipHeader: true, origin: -1});
-      XLSX.utils.sheet_add_json(ws, costosData, {origin: -1});
+      // 2. Crear la hoja y añadir datos por secciones
+      let finalData: any[] = [];
+      finalData.push([title]);
+      finalData.push([dateRange]);
+      finalData.push([]); // Spacer
+      finalData.push(['Resumen del Período']);
+      finalData = finalData.concat(summary.map(s => [s.Key, s.Value]));
+      finalData.push([]); // Spacer
+      finalData.push(['Desglose de Ingresos']);
+      const ingresosHeader = ['Contrato ID', 'Contratador', 'Fecha Evento', 'Ingreso'];
+      finalData.push(ingresosHeader);
+      ingresosData.forEach(item => finalData.push(Object.values(item)));
+      finalData.push([]); // Spacer
+      finalData.push(['Desglose de Costos']);
+      const costosHeader = ['Contrato ID', 'Personal', 'Servicio', 'Fecha Evento', 'Costo'];
+      finalData.push(costosHeader);
+      costosData.forEach(item => finalData.push(Object.values(item)));
 
-      // Clean sheet name
+      const ws = XLSX.utils.aoa_to_sheet(finalData);
+
+      // 3. Calcular anchos de columna
+      const colWidths = finalData.reduce((acc, row) => {
+        row.forEach((cell: any, colIndex: number) => {
+          const cellValue = cell?.v ?? cell?.toString() ?? '';
+          const len = cellValue.length;
+          if (!acc[colIndex] || len > acc[colIndex]) {
+            acc[colIndex] = len;
+          }
+        });
+        return acc;
+      }, [] as number[]);
+
+      ws['!cols'] = colWidths.map(w => ({ wch: w + 2 })); // Añadir padding
+
+      // 4. Añadir la hoja al libro
       const sheetName = data.tipoContratoNombre.replace(/[^a-zA-Z0-9]/g, '').substring(0, 31);
       XLSX.utils.book_append_sheet(wb, ws, sheetName);
     });

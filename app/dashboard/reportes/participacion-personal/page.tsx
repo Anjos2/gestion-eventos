@@ -38,6 +38,10 @@ export default function ParticipacionPersonalReportePage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filteredPersonal, setFilteredPersonal] = useState<Personal[]>([]);
+  const [isDropdownVisible, setIsDropdownVisible] = useState(false);
+
   useEffect(() => {
     const fetchPersonal = async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -61,11 +65,34 @@ export default function ParticipacionPersonalReportePage() {
           console.error('Error fetching personal:', error);
         } else {
           setPersonalList(data || []);
+          setFilteredPersonal(data || []);
         }
       }
     };
     fetchPersonal();
   }, []);
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const term = e.target.value;
+    setSearchTerm(term);
+    if (term) {
+      setFilteredPersonal(
+        personalList.filter(p =>
+          p.nombre.toLowerCase().includes(term.toLowerCase())
+        )
+      );
+      setIsDropdownVisible(true);
+    } else {
+      setFilteredPersonal(personalList);
+      setIsDropdownVisible(false);
+    }
+  };
+
+  const handleSelectPersonal = (personal: Personal) => {
+    setSelectedPersonal(personal.id.toString());
+    setSearchTerm(personal.nombre);
+    setIsDropdownVisible(false);
+  };
 
   const handleGenerateReport = async () => {
     if (!selectedPersonal || !startDate || !endDate) {
@@ -132,22 +159,62 @@ export default function ParticipacionPersonalReportePage() {
       return;
     }
 
-    const dataToExport = reportData.flatMap(contrato => 
+    const personalSeleccionado = personalList.find(p => p.id.toString() === selectedPersonal);
+
+    // 1. Preparar datos
+    const title = `Reporte de Participación para: ${personalSeleccionado?.nombre || 'N/A'}`;
+    const dateRange = `Período: ${new Date(startDate).toLocaleDateString()} - ${new Date(endDate).toLocaleDateString()}`;
+
+    const summaryData = [
+      { Criterio: 'Asistencias Puntuales', Total: summary?.PUNTUAL || 0 },
+      { Criterio: 'Tardanzas Registradas', Total: summary?.TARDANZA || 0 },
+      { Criterio: 'Ausencias Registradas', Total: summary?.AUSENTE || 0 },
+    ];
+
+    const details = reportData.flatMap(contrato => 
       contrato.servicios.map(servicio => ({
         'Contrato ID': contrato.id_contrato,
         'Tipo de Contrato': contrato.tipo_contrato_nombre,
         'Fecha del Evento': new Date(contrato.fecha_hora_evento).toLocaleString(),
         'Asistencia': contrato.estado_asistencia,
         'Servicio Realizado': servicio.nombre,
-        'Monto Pactado': servicio.monto_pactado,
+        'Monto Pactado': { v: servicio.monto_pactado, t: 'n', z: '"S/"#,##0.00' },
       }))
     );
 
-    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Participacion");
+    // 2. Crear la hoja y añadir datos por secciones
+    let finalData: any[] = [];
+    finalData.push([title]);
+    finalData.push([dateRange]);
+    finalData.push([]); // Spacer
+    finalData.push(['Resumen de Asistencia']);
+    finalData = finalData.concat(summaryData.map(s => [s.Criterio, s.Total]));
+    finalData.push([]); // Spacer
+    finalData.push(['Detalle de Participaciones']);
+    const detailsHeader = ['Contrato ID', 'Tipo de Contrato', 'Fecha del Evento', 'Asistencia', 'Servicio Realizado', 'Monto Pactado'];
+    finalData.push(detailsHeader);
+    details.forEach(item => finalData.push(Object.values(item)));
 
-    XLSX.writeFile(workbook, "ReporteParticipacionPersonal.xlsx");
+    const ws = XLSX.utils.aoa_to_sheet(finalData);
+
+    // 3. Calcular anchos de columna
+    const colWidths = finalData.reduce((acc, row) => {
+      row.forEach((cell: any, colIndex: number) => {
+        const cellValue = cell?.v ?? cell?.toString() ?? '';
+        const len = cellValue.length;
+        if (!acc[colIndex] || len > acc[colIndex]) {
+          acc[colIndex] = len;
+        }
+      });
+      return acc;
+    }, [] as number[]);
+
+    ws['!cols'] = colWidths.map(w => ({ wch: w + 2 })); // Añadir padding
+
+    // 4. Crear y descargar el libro
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Participacion");
+    XLSX.writeFile(wb, `ReporteParticipacion_${personalSeleccionado?.nombre.replace(/ /g, '_')}.xlsx`);
   };
 
   const AsistenciaIcon = ({ asistencia }: { asistencia: string }) => {
@@ -165,19 +232,35 @@ export default function ParticipacionPersonalReportePage() {
 
       <div className="bg-slate-800 rounded-xl shadow-lg p-6 border border-slate-700 mb-8">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-          <div className="md:col-span-2">
-            <label htmlFor="personal" className="block text-sm font-medium text-slate-400 mb-1 flex items-center"><FiUser className="mr-2"/>Personal</label>
-            <select
-              id="personal"
-              value={selectedPersonal}
-              onChange={(e) => setSelectedPersonal(e.target.value)}
+          <div className="md:col-span-2 relative">
+            <label htmlFor="personal-search" className="block text-sm font-medium text-slate-400 mb-1 flex items-center"><FiUser className="mr-2"/>Personal</label>
+            <input
+              type="text"
+              id="personal-search"
+              value={searchTerm}
+              onChange={handleSearchChange}
+              onFocus={() => setIsDropdownVisible(true)}
+              onBlur={() => setTimeout(() => setIsDropdownVisible(false), 100)}
+              placeholder="Buscar por nombre..."
               className="w-full bg-slate-700 border border-slate-600 rounded-lg text-white p-2 focus:outline-none focus:ring-2 focus:ring-sky-500"
-            >
-              <option value="">Seleccione un miembro del personal</option>
-              {personalList.map(p => (
-                <option key={p.id} value={p.id}>{p.nombre}</option>
-              ))}
-            </select>
+            />
+            {isDropdownVisible && (
+              <ul className="absolute z-10 w-full bg-slate-900 border border-slate-600 rounded-lg mt-1 max-h-60 overflow-y-auto shadow-lg">
+                {filteredPersonal.length > 0 ? (
+                  filteredPersonal.map(p => (
+                    <li 
+                      key={p.id} 
+                      onClick={() => handleSelectPersonal(p)}
+                      className="p-2 text-white hover:bg-sky-600 cursor-pointer"
+                    >
+                      {p.nombre}
+                    </li>
+                  ))
+                ) : (
+                  <li className="p-2 text-slate-400">No se encontraron coincidencias</li>
+                )}
+              </ul>
+            )}
           </div>
           <div>
             <label htmlFor="start-date" className="block text-sm font-medium text-slate-400 mb-1 flex items-center"><FiCalendar className="mr-2"/>Fecha de inicio</label>

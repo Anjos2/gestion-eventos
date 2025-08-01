@@ -5,6 +5,7 @@ import { supabase } from '@/app/lib/supabase';
 import { useParams, useRouter } from 'next/navigation';
 import { FiPlus, FiArrowLeft, FiCheckCircle } from 'react-icons/fi';
 import Link from 'next/link';
+import AsyncSelect from 'react-select/async';
 
 // --- INTERFACES ---
 interface ContratoDetails {
@@ -17,11 +18,6 @@ interface ContratoDetails {
   Tipos_Contrato: { nombre: string, ingreso_base: number } | null;
   Personal: { nombre: string } | null;
   Eventos_Contrato: { id: number }[];
-}
-
-interface PersonalOperativo {
-  id: number;
-  nombre: string;
 }
 
 interface Servicio {
@@ -38,8 +34,46 @@ interface Participacion {
   Evento_Servicios_Asignados: { id: number, Servicios: { nombre: string } | null }[];
 }
 
+interface SelectOption { value: number; label: string; }
+
+// --- ESTILOS PERSONALIZADOS para React-Select ---
+const selectStyles = {
+  control: (provided: any) => ({
+    ...provided,
+    backgroundColor: '#374151', // bg-slate-700
+    borderColor: '#4b5563', // border-slate-600
+    color: 'white',
+    minHeight: '42px',
+  }),
+  menu: (provided: any) => ({
+    ...provided,
+    backgroundColor: '#1f2937', // bg-slate-800
+    borderColor: '#4b5563', // border-slate-600
+  }),
+  option: (provided: any, state: { isSelected: boolean; isFocused: boolean; }) => ({
+    ...provided,
+    backgroundColor: state.isSelected ? '#0ea5e9' : state.isFocused ? '#374151' : '#1f2937',
+    color: 'white',
+    ':active': {
+      backgroundColor: '#374151',
+    },
+  }),
+  singleValue: (provided: any) => ({
+    ...provided,
+    color: 'white',
+  }),
+  input: (provided: any) => ({
+    ...provided,
+    color: 'white',
+  }),
+  placeholder: (provided: any) => ({
+    ...provided,
+    color: '#9ca3af', // text-slate-400
+  }),
+};
+
 // --- MODAL COMPONENT ---
-const AsignarServicioModal = ({ isOpen, onClose, servicios, onAsignar }) => {
+const AsignarServicioModal = ({ isOpen, onClose, servicios, onAsignar }: any) => {
   const [selectedServicio, setSelectedServicio] = useState('');
 
   if (!isOpen) return null;
@@ -63,7 +97,7 @@ const AsignarServicioModal = ({ isOpen, onClose, servicios, onAsignar }) => {
           className="w-full p-2 bg-slate-700 border border-slate-600 rounded-lg text-white mb-6"
         >
           <option value="">-- Elige un servicio --</option>
-          {servicios.map(s => <option key={s.id} value={s.id}>{s.nombre} (S/. {s.monto_base.toFixed(2)})</option>)}
+          {servicios.map((s: Servicio) => <option key={s.id} value={s.id}>{s.nombre} (S/. {s.monto_base.toFixed(2)})</option>)}
         </select>
         <div className="flex justify-end gap-4">
           <button onClick={onClose} className="px-4 py-2 bg-slate-600 text-white font-semibold rounded-lg hover:bg-slate-500 transition-colors">Cancelar</button>
@@ -80,10 +114,9 @@ export default function ContratoDetailPage() {
   const { id } = useParams();
   const router = useRouter();
   const [contrato, setContrato] = useState<ContratoDetails | null>(null);
-  const [personalOperativo, setPersonalOperativo] = useState<PersonalOperativo[]>([]);
   const [participaciones, setParticipaciones] = useState<Participacion[]>([]);
   const [servicios, setServicios] = useState<Servicio[]>([]);
-  const [selectedPersonal, setSelectedPersonal] = useState('');
+  const [selectedPersonal, setSelectedPersonal] = useState<SelectOption | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentParticipacionId, setCurrentParticipacionId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
@@ -112,17 +145,14 @@ export default function ContratoDetailPage() {
           eventoId = nuevoEvento.id;
         }
 
-        const [personalRes, participacionesRes, serviciosRes] = await Promise.all([
-          supabase.from('Personal').select('id, nombre').eq('id_organizacion', contratoData.id_organizacion).eq('rol', 'OPERATIVO').eq('es_activo', true),
+        const [participacionesRes, serviciosRes] = await Promise.all([
           supabase.from('Participaciones_Personal').select(`*, Personal(nombre), Evento_Servicios_Asignados(*, Servicios(nombre))`).eq('id_evento_contrato', eventoId),
           supabase.from('Servicios').select('id, nombre, monto_base').eq('id_organizacion', contratoData.id_organizacion).eq('es_activo', true)
         ]);
 
-        if (personalRes.error) throw personalRes.error;
         if (participacionesRes.error) throw participacionesRes.error;
         if (serviciosRes.error) throw serviciosRes.error;
 
-        setPersonalOperativo(personalRes.data || []);
         setParticipaciones(participacionesRes.data || []);
         setServicios(serviciosRes.data || []);
 
@@ -134,6 +164,26 @@ export default function ContratoDetailPage() {
     };
     fetchAllData();
   }, [id]);
+
+  const loadPersonal = async (inputValue: string): Promise<SelectOption[]> => {
+    if (!contrato) return [];
+
+    const { data, error } = await supabase
+      .from('Personal')
+      .select('id, nombre')
+      .eq('id_organizacion', contrato.id_organizacion)
+      .eq('rol', 'OPERATIVO')
+      .eq('es_activo', true)
+      .ilike('nombre', `%${inputValue}%`)
+      .limit(10);
+
+    if (error) {
+      console.error('Error buscando personal:', error);
+      return [];
+    }
+
+    return data.map((p: any) => ({ value: p.id, label: p.nombre }));
+  };
 
   // --- HANDLERS ---
   const handleAsignarPersonal = async () => { 
@@ -148,7 +198,7 @@ export default function ContratoDetailPage() {
         .insert({
           id_organizacion: contrato.id_organizacion,
           id_evento_contrato: contrato.Eventos_Contrato[0].id,
-          id_personal_participante: parseInt(selectedPersonal),
+          id_personal_participante: selectedPersonal.value,
           estado_asistencia: 'ASIGNADO',
         })
         .select('*, Personal(nombre), Evento_Servicios_Asignados(*, Servicios(nombre))')
@@ -157,7 +207,7 @@ export default function ContratoDetailPage() {
       if (error) throw error;
       
       setParticipaciones([...participaciones, nuevaParticipacion]);
-      setSelectedPersonal('');
+      setSelectedPersonal(null);
       alert('Personal asignado con éxito.');
     } catch (err: any) {
       alert(`Error al asignar personal: ${err.message}`);
@@ -337,17 +387,18 @@ export default function ContratoDetailPage() {
         <div className="bg-slate-800 p-6 rounded-xl border border-slate-700">
           <h2 className="text-2xl font-bold text-white mb-4">Asignación de personal y servicios</h2>
           <div className="flex gap-4 mb-6">
-          <select 
+          <AsyncSelect
             value={selectedPersonal}
-            onChange={(e) => setSelectedPersonal(e.target.value)}
-            className="flex-grow px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white disabled:bg-slate-800 disabled:cursor-not-allowed"
-            disabled={contrato.estado === 'COMPLETADO' || contrato.estado_asignacion === 'COMPLETO'}
-          >
-            <option value="">-- Seleccionar personal --</option>
-            {personalOperativo.map(p => (
-              <option key={p.id} value={p.id}>{p.nombre}</option>
-            ))}
-          </select>
+            onChange={(option) => setSelectedPersonal(option as SelectOption)}
+            loadOptions={loadPersonal}
+            placeholder="Buscar y seleccionar personal..."
+            cacheOptions
+            defaultOptions
+            styles={selectStyles}
+            className="flex-grow"
+            classNamePrefix="react-select"
+            isDisabled={contrato.estado === 'COMPLETADO' || contrato.estado_asignacion === 'COMPLETO'}
+          />
           <button onClick={handleAsignarPersonal} className="px-6 py-2 bg-sky-600 text-white font-semibold rounded-lg hover:bg-sky-700 disabled:bg-sky-800 disabled:cursor-not-allowed" disabled={contrato.estado === 'COMPLETADO' || contrato.estado_asignacion === 'COMPLETO'}>Asignar</button>
         </div>
           <div className="overflow-x-auto">
@@ -362,7 +413,7 @@ export default function ContratoDetailPage() {
                 </tr>
               </thead>
               <tbody className="bg-slate-800 divide-y divide-slate-700">
-                {participaciones.map(p => (
+                {participaciones.map((p: Participacion) => (
                   <tr key={p.id}>
                     <td className="px-6 py-4 align-top text-sm text-white">{p.Personal?.nombre}</td>
                     <td className="px-6 py-4 align-top">

@@ -52,6 +52,9 @@ function RegisterPersonalForm() {
       const { data: signUpData, error: authError } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/login`,
+        },
       });
 
       if (authError) throw authError;

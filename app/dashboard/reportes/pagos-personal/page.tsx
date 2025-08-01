@@ -36,6 +36,10 @@ export default function PagosPersonalReportePage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filteredPersonal, setFilteredPersonal] = useState<Personal[]>([]);
+  const [isDropdownVisible, setIsDropdownVisible] = useState(false);
+
   useEffect(() => {
     const fetchPersonal = async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -52,17 +56,41 @@ export default function PagosPersonalReportePage() {
           .from('Personal')
           .select('id, nombre')
           .eq('id_organizacion', adminData.id_organizacion)
+          .eq('rol', 'OPERATIVO')
           .order('nombre', { ascending: true });
 
         if (error) {
           console.error('Error fetching personal:', error);
         } else {
           setPersonalList(data || []);
+          setFilteredPersonal(data || []);
         }
       }
     };
     fetchPersonal();
   }, []);
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const term = e.target.value;
+    setSearchTerm(term);
+    if (term) {
+      setFilteredPersonal(
+        personalList.filter(p =>
+          p.nombre.toLowerCase().includes(term.toLowerCase())
+        )
+      );
+      setIsDropdownVisible(true);
+    } else {
+      setFilteredPersonal(personalList);
+      setIsDropdownVisible(false);
+    }
+  };
+
+  const handleSelectPersonal = (personal: Personal) => {
+    setSelectedPersonal(personal.id.toString());
+    setSearchTerm(personal.nombre);
+    setIsDropdownVisible(false);
+  };
 
   const handleGenerateReport = async () => {
     if (!selectedPersonal || !startDate || !endDate) {
@@ -125,25 +153,62 @@ export default function PagosPersonalReportePage() {
       return;
     }
 
-    const dataToExport = reportData.flatMap(lote => 
+    const personalSeleccionado = personalList.find(p => p.id.toString() === selectedPersonal);
+    const totalPagado = reportData.reduce((sum, lote) => sum + lote.monto_total, 0);
+
+    // 1. Preparar datos
+    const title = `Reporte de Pagos para: ${personalSeleccionado?.nombre || 'N/A'}`;
+    const dateRange = `Período: ${new Date(startDate).toLocaleDateString()} - ${new Date(endDate).toLocaleDateString()}`;
+
+    const summary = [
+      { Key: 'Total de Lotes de Pago', Value: reportData.length },
+      { Key: 'Monto Total Pagado', Value: `S/${totalPagado.toFixed(2)}` },
+    ];
+
+    const details = reportData.flatMap(lote => 
       lote.Detalles_Lote_Pago.map(detalle => ({
         'Lote ID': lote.id,
         'Fecha de Pago': new Date(lote.fecha_pago + 'T00:00:00').toLocaleDateString(),
-        'Monto Total del Lote': lote.monto_total,
         'Servicio Pagado': detalle.Evento_Servicios_Asignados.Servicios.nombre,
-        'Monto Pagado por Servicio': detalle.monto_pagado,
+        'Monto Pagado': { v: detalle.monto_pagado, t: 'n', z: '"S/"#,##0.00' },
         'Asistencia': detalle.estado_asistencia_registrado,
-        'Descuento (%)': detalle.descuento_aplicado_pct,
+        'Descuento (%)': detalle.descuento_aplicado_pct || 0,
       }))
     );
 
-    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Pagos");
+    // 2. Crear la hoja y añadir datos por secciones
+    let finalData: any[] = [];
+    finalData.push([title]);
+    finalData.push([dateRange]);
+    finalData.push([]); // Spacer
+    finalData.push(['Resumen del Período']);
+    finalData = finalData.concat(summary.map(s => [s.Key, s.Value]));
+    finalData.push([]); // Spacer
+    finalData.push(['Detalle de Pagos']);
+    const detailsHeader = ['Lote ID', 'Fecha de Pago', 'Servicio Pagado', 'Monto Pagado', 'Asistencia', 'Descuento (%)'];
+    finalData.push(detailsHeader);
+    details.forEach(item => finalData.push(Object.values(item)));
 
-    // Buffer
-    XLSX.writeFile(workbook, "ReportePagosPersonal.xlsx");
+    const ws = XLSX.utils.aoa_to_sheet(finalData);
 
+    // 3. Calcular anchos de columna
+    const colWidths = finalData.reduce((acc, row) => {
+      row.forEach((cell: any, colIndex: number) => {
+        const cellValue = cell?.v ?? cell?.toString() ?? '';
+        const len = cellValue.length;
+        if (!acc[colIndex] || len > acc[colIndex]) {
+          acc[colIndex] = len;
+        }
+      });
+      return acc;
+    }, [] as number[]);
+
+    ws['!cols'] = colWidths.map(w => ({ wch: w + 2 })); // Añadir padding
+
+    // 4. Crear y descargar el libro
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Reporte de Pagos");
+    XLSX.writeFile(wb, `ReportePagos_${personalSeleccionado?.nombre.replace(/ /g, '_')}.xlsx`);
   };
 
   return (
@@ -152,19 +217,35 @@ export default function PagosPersonalReportePage() {
 
       <div className="bg-slate-800 rounded-xl shadow-lg p-6 border border-slate-700 mb-8">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-          <div className="md:col-span-2">
-            <label htmlFor="personal" className="block text-sm font-medium text-slate-400 mb-1">Personal</label>
-            <select
-              id="personal"
-              value={selectedPersonal}
-              onChange={(e) => setSelectedPersonal(e.target.value)}
+          <div className="md:col-span-2 relative">
+            <label htmlFor="personal-search" className="block text-sm font-medium text-slate-400 mb-1">Personal</label>
+            <input
+              type="text"
+              id="personal-search"
+              value={searchTerm}
+              onChange={handleSearchChange}
+              onFocus={() => setIsDropdownVisible(true)}
+              onBlur={() => setTimeout(() => setIsDropdownVisible(false), 100)} // Delay to allow click on dropdown
+              placeholder="Buscar por nombre..."
               className="w-full bg-slate-700 border border-slate-600 rounded-lg text-white p-2 focus:outline-none focus:ring-2 focus:ring-sky-500"
-            >
-              <option value="">Seleccione un miembro del personal</option>
-              {personalList.map(p => (
-                <option key={p.id} value={p.id}>{p.nombre}</option>
-              ))}
-            </select>
+            />
+            {isDropdownVisible && (
+              <ul className="absolute z-10 w-full bg-slate-900 border border-slate-600 rounded-lg mt-1 max-h-60 overflow-y-auto shadow-lg">
+                {filteredPersonal.length > 0 ? (
+                  filteredPersonal.map(p => (
+                    <li 
+                      key={p.id} 
+                      onClick={() => handleSelectPersonal(p)}
+                      className="p-2 text-white hover:bg-sky-600 cursor-pointer"
+                    >
+                      {p.nombre}
+                    </li>
+                  ))
+                ) : (
+                  <li className="p-2 text-slate-400">No se encontraron coincidencias</li>
+                )}
+              </ul>
+            )}
           </div>
           <div>
             <label htmlFor="start-date" className="block text-sm font-medium text-slate-400 mb-1">Fecha de inicio</label>
