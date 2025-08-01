@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/app/lib/supabase';
 import { FiClipboard, FiClock, FiCheckSquare, FiCalendar, FiAlertTriangle, FiThumbsUp, FiAlertCircle, FiXCircle } from 'react-icons/fi';
 import Link from 'next/link';
@@ -54,6 +55,7 @@ export default function DashboardPage() {
   const [operativoStats, setOperativoStats] = useState<OperativoDashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -61,6 +63,15 @@ export default function DashboardPage() {
         setLoading(true);
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error('Usuario no autenticado.');
+
+        // ID del Super Administrador
+        const SUPER_ADMIN_USER_ID = '7f76aede-699d-463e-acf5-5c95a3e8b84e';
+
+        // Redirección para Super Admin
+        if (user.id === SUPER_ADMIN_USER_ID) {
+          router.push('/dashboard/super-admin');
+          return; // Detiene la ejecución para evitar cargar datos innecesarios
+        }
 
         const { data: personalData, error: personalError } = await supabase
           .from('Personal')

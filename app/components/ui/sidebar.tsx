@@ -31,18 +31,16 @@ const navItemsAdminApoyo = [
   { href: '/dashboard/reportes', label: 'Reportes', icon: <FiBarChart2 /> },
 ];
 
-const navItemsSuperAdmin = [
-  { href: '/super-admin', label: 'Gestión global', icon: <FiShield /> },
-];
-
 // Definir el tipo para el rol del usuario
-type UserRole = 'ADMINISTRATIVO' | 'OPERATIVO' | 'SUPER_ADMIN' | 'ADMINISTRATIVO_APOYO' | null;
+type UserRole = 'ADMINISTRATIVO' | 'OPERATIVO' | 'ADMINISTRATIVO_APOYO' | null;
 
-const SUPER_ADMIN_USER_ID = process.env.NEXT_PUBLIC_SUPER_ADMIN_ID;
+// ID del Super Administrador
+const SUPER_ADMIN_USER_ID = '7f76aede-699d-463e-acf5-5c95a3e8b84e';
 
 export default function Sidebar() {
   const pathname = usePathname();
   const [userRole, setUserRole] = useState<UserRole>(null);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [orgName, setOrgName] = useState<string>('GestiónApp');
   const [loading, setLoading] = useState(true);
 
@@ -51,20 +49,33 @@ export default function Sidebar() {
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
-          // Comprobar si es Super Administrador
+          // Comprobar si es Super Administrador por ID
           if (user.id === SUPER_ADMIN_USER_ID) {
-            setUserRole('SUPER_ADMIN');
+            setIsSuperAdmin(true);
+            setUserRole(null); // No tiene un rol de la tabla Personal
             setOrgName('Plataforma');
             return;
           }
 
           const { data: personal, error } = await supabase
             .from('Personal')
-            .select('rol, Organizaciones!id_organizacion(nombre)') // Query explícita
+            .select('rol, Organizaciones!id_organizacion(nombre)')
             .eq('supabase_user_id', user.id)
             .single();
 
-          if (error) throw new Error('No se pudo obtener la información del usuario.');
+          // Si no se encuentra un registro de personal, es un estado inconsistente.
+          if (!personal) {
+            // PGRST116 es el código de Supabase para "cero filas devueltas" en una consulta .single()
+            if (error && error.code !== 'PGRST116') {
+              throw new Error(`Error de base de datos: ${error.message}`); // Lanza un error si es un problema diferente
+            }
+            
+            console.warn('Usuario autenticado sin registro en Personal. Forzando cierre de sesión.');
+            await supabase.auth.signOut();
+            window.location.href = '/auth/login'; // Redirigir explícitamente
+            return;
+          }
+
           if (personal) {
             setUserRole(personal.rol as UserRole);
             const orgData = personal.Organizaciones;
@@ -76,8 +87,7 @@ export default function Sidebar() {
                 setOrgName((orgData as any).nombre);
               }
             }
-          }
-        }
+          }        }
       } catch (error) {
         console.error("Error fetching user role:", error);
       } finally {
@@ -89,9 +99,12 @@ export default function Sidebar() {
   }, []);
 
   const getNavItems = () => {
+    if (isSuperAdmin) {
+      return [
+        { href: '/dashboard/super-admin', label: 'Gestión Global', icon: <FiShield /> },
+      ];
+    }
     switch (userRole) {
-      case 'SUPER_ADMIN':
-        return navItemsSuperAdmin;
       case 'ADMINISTRATIVO':
         return navItemsAdmin;
       case 'ADMINISTRATIVO_APOYO':
@@ -102,6 +115,7 @@ export default function Sidebar() {
         return [];
     }
   };
+
 
   const navItems = getNavItems();
 
