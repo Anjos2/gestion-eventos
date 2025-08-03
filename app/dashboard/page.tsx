@@ -3,8 +3,9 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/app/lib/supabase';
-import { FiClipboard, FiClock, FiCheckSquare, FiCalendar, FiAlertTriangle, FiThumbsUp, FiAlertCircle, FiXCircle } from 'react-icons/fi';
+import { FiClipboard, FiClock, FiCheckSquare, FiCalendar, FiAlertTriangle, FiThumbsUp, FiAlertCircle, FiXCircle, FiCreditCard } from 'react-icons/fi';
 import Link from 'next/link';
+import Image from 'next/image';
 
 // --- Tipos de Datos ---
 type UserRole = 'ADMINISTRATIVO' | 'OPERATIVO' | 'ADMINISTRATIVO_APOYO';
@@ -14,6 +15,8 @@ interface AdminDashboardStats {
   contratosPorConfirmar: number;
   pagosPendientesAprobacion: number;
   contratosCompletadosMes: number;
+  registrosActuales: number;
+  precioPorRegistro: string;
   proximoEvento: {
     contratador: string;
     fecha: string;
@@ -110,12 +113,16 @@ export default function DashboardPage() {
             contratosPorConfirmarRes, 
             pagosPendientesAprobacionRes, 
             contratosCompletadosMesRes,
-            proximoEventoRes
+            proximoEventoRes,
+            registrosActualesRes,
+            configRes
           ] = await Promise.all([
             supabase.from('Contratos').select('id', { count: 'exact', head: true }).eq('id_organizacion', orgId).eq('estado_asignacion', 'PENDIENTE').eq('estado', 'ACTIVO'),
             supabase.from('Lotes_Pago').select('id', { count: 'exact', head: true }).eq('id_organizacion', orgId).eq('estado', 'PENDIENTE_APROBACION'),
             supabase.from('Contratos').select('id', { count: 'exact', head: true }).eq('id_organizacion', orgId).eq('estado', 'COMPLETADO').gte('updated_at', last30Days),
-            supabase.from('Contratos').select('id, fecha_hora_evento, id_contratador').eq('id_organizacion', orgId).eq('estado', 'ACTIVO').order('fecha_hora_evento', { ascending: true }).limit(1)
+            supabase.from('Contratos').select('id, fecha_hora_evento, id_contratador').eq('id_organizacion', orgId).eq('estado', 'ACTIVO').order('fecha_hora_evento', { ascending: true }).limit(1),
+            supabase.from('Contadores_Uso').select('conteo_registros_nuevos').eq('id_organizacion', orgId).single(),
+            supabase.from('Configuracion_Plataforma').select('valor').eq('clave', 'precio_por_registro').single()
           ]);
 
           if (proximoEventoRes.error) {
@@ -145,6 +152,8 @@ export default function DashboardPage() {
             contratosPorConfirmar: contratosPorConfirmarRes.count || 0,
             pagosPendientesAprobacion: pagosPendientesAprobacionRes.count || 0,
             contratosCompletadosMes: contratosCompletadosMesRes.count || 0,
+            registrosActuales: registrosActualesRes.data?.conteo_registros_nuevos || 0,
+            precioPorRegistro: configRes.data?.valor || '0',
             proximoEvento: proximoEventoData
           });
         }
@@ -199,6 +208,50 @@ export default function DashboardPage() {
               {adminStats?.proximoEvento ? <p>{adminStats.proximoEvento.fecha}</p> : <p>No hay eventos programados.</p>}
             </DashboardCard>
           </div>
+          <div className="mt-8 bg-slate-800 shadow-md rounded-lg p-6 border border-slate-700">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold text-white">Facturación</h2>
+              <FiCreditCard className="text-pink-400 text-2xl" />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+              <div>
+                <p className="text-slate-400 text-sm">Precio por Registro</p>
+                <p className="text-white font-bold text-2xl">S/ {adminStats?.precioPorRegistro}</p>
+              </div>
+              <div>
+                <p className="text-slate-400 text-sm">Registros Actuales</p>
+                <p className="text-white font-bold text-2xl">{adminStats?.registrosActuales}</p>
+              </div>
+              <div>
+                <p className="text-slate-400 text-sm">Monto a Facturar</p>
+                <p className="text-sky-400 font-bold text-2xl">S/ {( (adminStats?.registrosActuales || 0) * parseFloat(adminStats?.precioPorRegistro || '0') ).toFixed(2)}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Sección de Pago con Yape */}
+          <div className="mt-8 bg-gradient-to-r from-purple-500 to-indigo-600 p-6 rounded-lg shadow-lg text-white">
+            <div className="flex flex-col md:flex-row items-center justify-between">
+              <div className="mb-4 md:mb-0 md:mr-6">
+                <h3 className="text-2xl font-bold">¡Paga tu suscripción con Yape!</h3>
+                <p className="mt-2">Escanea el código QR o usa nuestro número para renovar tu servicio de forma rápida y segura.</p>
+                <div className="mt-4 text-lg">
+                  <p>Titular: <span className="font-semibold">Joseph Huayhualla</span></p>
+                  <p>Número: <span className="font-semibold">999 636 425</span></p>
+                </div>
+              </div>
+              <div className="bg-white p-2 rounded-lg shadow-md">
+                <Image 
+                  src="/yape-qr.png" 
+                  alt="Código QR de Yape" 
+                  width={150} 
+                  height={150} 
+                  className="rounded-md"
+                />
+              </div>
+            </div>
+          </div>
+
         </>
       )}
     </div>

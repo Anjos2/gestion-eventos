@@ -665,3 +665,50 @@ Esta versión se enfoca en pulir la experiencia de usuario, solucionar errores c
 *   **Decisiones de Implementación:**
     *   Se utilizó la herramienta de reemplazo para modificar sistemáticamente los archivos `.tsx` correspondientes, asegurando que todos los textos visibles por el usuario sigan una convención de mayúsculas coherente y profesional.
     *   Se eliminó un enlace obsoleto en la página de registro que apuntaba a un flujo de registro de personal que ya no se utiliza.
+
+---
+
+# Bitácora de Implementación (v1.6 - Mejoras de UX y Corrección de Errores Críticos)
+
+Esta versión se enfoca en mejorar radicalmente la experiencia de usuario (UX) tanto para administradores como para el personal operativo, solucionar errores críticos que impedían el correcto funcionamiento en producción y profesionalizar las funcionalidades de reportería.
+
+### 1. Rediseño del Módulo "Mis Pagos" para Operativos (HU-17)
+*   **Problema:** El personal operativo no tenía visibilidad sobre los servicios que había realizado y que estaban pendientes de pago, ni un historial claro de los pagos ya recibidos.
+*   **Solución:** Se ha rediseñado por completo la sección `/dashboard/mis-pagos` para ofrecer al personal operativo una visión de 360 grados sobre el ciclo de vida de sus ingresos.
+    *   **Funcionalidad:** La sección ahora cuenta con tres pestañas claras y funcionales:
+        1.  **Servicios por Pagar:** Una nueva vista que muestra una lista detallada de todos los servicios individuales que el empleado ha completado en contratos ya finalizados y que están pendientes de ser incluidos en un lote de pago.
+        2.  **Lotes por Aprobar:** Mantiene la funcionalidad existente, permitiendo al empleado aceptar o reclamar los lotes de pago que el administrador ha preparado.
+        3.  **Historial de Lotes:** Una nueva vista de solo lectura que muestra un historial completo de todos los lotes que ya han sido aceptados y pagados.
+*   **Decisiones de Implementación:**
+    *   **Navegación por Pestañas:** Se creó un nuevo layout (`app/dashboard/mis-pagos/layout.tsx`) para implementar una navegación clara y contextual entre las tres nuevas secciones, mejorando la organización del módulo.
+    *   **Vista de Base de Datos para Fiabilidad:** Para solucionar un error recurrente y complejo de ordenamiento en la consulta de servicios pendientes, se creó una nueva vista de PostgreSQL (`vista_servicios_pendientes_por_personal`). Esta vista aplana la consulta, mejora el rendimiento y garantiza que los datos se puedan ordenar por fecha de manera fiable y sin errores.
+    *   **Componentización:** Se reestructuró la funcionalidad en componentes de página separados (`pendientes`, `por-aprobar`, `historial`) para una mayor claridad y mantenimiento del código.
+
+### 2. Mejora de Usabilidad en Filtros de Reportes (HU-18)
+*   **Problema:** Los filtros de selección de personal en los reportes de "Pagos por Personal" y "Participación por Personal" utilizaban un menú desplegable (`<select>`), una solución que no es escalable y se vuelve rápidamente inutilizable en organizaciones con una lista creciente de empleados.
+*   **Solución:** Se reemplazaron los menús desplegables por un **campo de búsqueda interactivo (combobox)**.
+    *   **Funcionalidad:** Los administradores ahora pueden escribir el nombre de un empleado y la lista se filtra en tiempo real, mostrando solo las coincidencias. Esto mejora drásticamente la velocidad, la eficiencia y la experiencia de usuario al generar reportes.
+    *   **Filtrado por Rol:** Se aseguró que en ambos reportes solo se listen los empleados con el rol `OPERATIVO`, ya que son los únicos relevantes para estos informes, haciendo la lista de búsqueda más pertinente.
+*   **Decisiones de Implementación:**
+    *   **Componente Interactivo:** Se utilizó estado de React (`useState`) para gestionar el término de búsqueda, la lista de resultados filtrados y la visibilidad del menú desplegable, creando una experiencia de búsqueda fluida y profesional.
+    *   **Lógica en Frontend:** El filtrado de la lista de personal se realiza en el lado del cliente, lo que proporciona una respuesta instantánea al usuario mientras escribe.
+
+### 3. Optimización de la Exportación de Reportes a Excel (HU-15 Mejora)
+*   **Problema:** Los archivos de Excel generados desde los reportes eran un simple volcado de datos, sin formato, títulos ni estructura, lo que los hacía poco profesionales y difíciles de leer.
+*   **Solución:** Se ha mejorado la función de exportación en los tres reportes principales (Rentabilidad, Pagos por Personal y Participación por Personal) para generar hojas de cálculo con un formato profesional y legible.
+    *   **Funcionalidad Mejorada:**
+        1.  **Ancho de Columna Automático:** Las columnas ahora se ajustan dinámicamente al ancho de su contenido, eliminando la necesidad de redimensionamiento manual.
+        2.  **Títulos y Subtítulos:** Cada hoja incluye un título principal descriptivo, el rango de fechas del reporte y subtítulos claros para cada sección de datos.
+        3.  **Resúmenes de Datos:** Se incluyen las métricas clave (ej. Ingreso Neto, Resumen de Asistencia) en la parte superior del reporte, replicando la información visible en la interfaz para un contexto inmediato.
+*   **Decisiones de Implementación:**
+    *   **Librería `xlsx`:** Se utilizó la librería `xlsx` para construir las hojas de cálculo de forma programática.
+    *   **Estructura de Datos Jerárquica:** Se transformaron los datos de la aplicación a una estructura de array de arrays (`aoa_to_sheet`) para tener un control total sobre la disposición de las celdas, permitiendo la inserción de títulos, resúmenes y espacios en blanco para una mejor estructura visual.
+    *   **Cálculo de Ancho Dinámico:** Se implementó una lógica que itera sobre todos los datos para calcular el ancho máximo necesario para cada columna antes de generar el archivo.
+
+### 4. Corrección de Errores Críticos de Producción y Desarrollo
+*   **Error de Enlaces de Confirmación en Producción:**
+    *   **Problema:** Los correos de confirmación de cuenta para nuevos usuarios generaban un enlace que apuntaba a `localhost:3000` en lugar del dominio de producción, impidiendo el flujo de registro.
+    *   **Solución:** Se corrigió el problema instruyendo al usuario para que configure la **URL del Sitio** en el panel de control de Supabase (`Authentication > URL Configuration`) para que apunte al dominio de producción (`https://gestion-eventos-iota.vercel.app/`). Adicionalmente, se actualizó el código de registro de personal para usar la variable de entorno `NEXT_PUBLIC_SITE_URL` al generar los enlaces, asegurando la robustez de la solución.
+*   **Errores de Tipado en TypeScript:**
+    *   **Problema:** Se detectaron y corrigieron varios errores de tipado que impedían el correcto funcionamiento de componentes, como el selector asíncrono en la página de detalle del contrato y la visualización de mensajes de error.
+    *   **Solución:** Se ajustaron las definiciones de tipo (`interface`) y la lógica de los componentes para que coincidieran con los tipos de datos esperados por las librerías (`react-select`) y el estado de la aplicación, garantizando la seguridad de tipos y eliminando los errores en tiempo de compilación.
