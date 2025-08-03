@@ -132,9 +132,9 @@ export default function SuperAdminPage() {
       <h1 className="text-3xl font-bold text-white mb-6">Panel de Superadministrador</h1>
       
       <div className="bg-slate-800 shadow-md rounded-lg p-6 border border-slate-700 mb-6">
-        <h2 class="text-xl font-semibold text-white mb-4">Configuración de Facturación</h2>
-        <div class="flex items-center">
-          <label class="text-slate-300 mr-4">Precio por Registro (S/):</label>
+        <h2 className="text-xl font-semibold text-white mb-4">Configuración de Facturación</h2>
+        <div className="flex items-center">
+          <label className="text-slate-300 mr-4">Precio por Registro (S/):</label>
           {editPrecio ? (
             <input 
               type="number"
