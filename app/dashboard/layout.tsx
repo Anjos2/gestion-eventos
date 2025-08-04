@@ -30,7 +30,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex bg-slate-900 text-slate-100 min-h-screen">
       <Sidebar isOpen={isSidebarOpen} toggleSidebar={() => setSidebarOpen(!isSidebarOpen)} />
-      <div className="flex-1 flex flex-col h-screen">
+      <div className="flex-1 flex flex-col h-screen w-0">
         <Header toggleSidebar={() => setSidebarOpen(!isSidebarOpen)} />
         {isSuspended && (
           <div className="bg-red-500 text-white text-center p-4">
