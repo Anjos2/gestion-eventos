@@ -12,17 +12,24 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             className: '',
             duration: 5000,
             style: {
-              background: '#333',
-              color: '#fff',
+              background: '#1f2937', // bg-slate-800
+              color: '#f1f5f9', // text-slate-100
+              border: '1px solid #334155' // border-slate-700
             },
             // Default options for specific types
             success: {
               duration: 3000,
-              theme: {
-                primary: 'green',
-                secondary: 'black',
+              iconTheme: {
+                primary: '#22c55e', // green-500
+                secondary: '#f1f5f9',
               },
             },
+            error: {
+              iconTheme: {
+                primary: '#ef4444', // red-500
+                secondary: '#f1f5f9',
+              },
+            }
           }}
         />
         {children}
