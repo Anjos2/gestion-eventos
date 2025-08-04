@@ -712,3 +712,27 @@ Esta versión se enfoca en mejorar radicalmente la experiencia de usuario (UX) t
 *   **Errores de Tipado en TypeScript:**
     *   **Problema:** Se detectaron y corrigieron varios errores de tipado que impedían el correcto funcionamiento de componentes, como el selector asíncrono en la página de detalle del contrato y la visualización de mensajes de error.
     *   **Solución:** Se ajustaron las definiciones de tipo (`interface`) y la lógica de los componentes para que coincidieran con los tipos de datos esperados por las librerías (`react-select`) y el estado de la aplicación, garantizando la seguridad de tipos y eliminando los errores en tiempo de compilación.
+---
+# Bitácora de Implementación (v1.7 - Mejoras de UX y Corrección de Errores Críticos)
+
+Esta versión se enfoca en mejorar radicalmente la experiencia de usuario (UX) y la estabilidad de la aplicación, solucionando un error crítico de autenticación y cambiando la forma en que se manejan las organizaciones suspendidas.
+
+### 1. Mejora del Flujo para Organizaciones Suspendidas
+*   **Problema:** Anteriormente, un administrador de una organización con estado `SUSPENDIDA` era automáticamente desconectado al intentar acceder, lo cual era una experiencia de usuario abrupta y poco informativa.
+*   **Solución:** Se ha rediseñado completamente el flujo para que estos usuarios puedan iniciar sesión y entender claramente la situación.
+    *   **Funcionalidad:**
+        1.  **Acceso Permitido:** Los administradores de organizaciones suspendidas ahora pueden iniciar sesión correctamente.
+        2.  **Notificación Persistente:** Una vez dentro del dashboard, se muestra un banner de advertencia permanente en la parte superior de la pantalla, informando sobre la suspensión de la cuenta y la desactivación de las funcionalidades.
+        3.  **Deshabilitación de Funciones:** Toda la interfaz de usuario se deshabilita visualmente (opacidad reducida) y funcionalmente (eventos de clic bloqueados), permitiendo al usuario navegar y ver los datos existentes pero impidiendo cualquier acción de creación, edición o eliminación.
+*   **Decisiones de Implementación:**
+    *   **Centralización del Estado con React Context:** Se introdujo un `OrganizationContext` para gestionar de forma centralizada la sesión del usuario, los detalles de su organización (incluido el estado `ACTIVA`/`SUSPENDIDA`) y su rol. Esto elimina la necesidad de consultas repetitivas en cada página.
+    *   **Refactorización del Layout:** El componente `app/dashboard/layout.tsx` fue refactorizado para usar este contexto. Ahora, en lugar de redirigir al usuario, lee el estado de la organización y aplica las clases de CSS y la lógica necesaria para mostrar el banner y deshabilitar la UI condicionalmente.
+
+### 2. Corrección de Error Crítico de Autenticación
+*   **Problema:** La aplicación sufría de un error de "múltiples instancias de GoTrueClient" que provocaba que los usuarios fueran expulsados al login de forma intermitente después de iniciar sesión. Esto se debía a inicializaciones conflictivas del cliente de Supabase.
+*   **Solución:** Se realizó una refactorización masiva para estandarizar el uso del cliente de Supabase en toda la aplicación.
+    *   **Funcionalidad:** Se ha estabilizado el flujo de autenticación, eliminando los cierres de sesión inesperados.
+    *   **Decisiones de Implementación:**
+        *   **Eliminación de Instancia Conflictiva:** Se eliminó el cliente de Supabase que se inicializaba en `app/lib/supabase.ts`.
+        *   **Uso de Helpers Oficiales:** Se refactorizaron **22 archivos** para que utilizaran exclusivamente los helpers de `@supabase/auth-helpers-nextjs`. Se usó `createClientComponentClient()` en todos los componentes de cliente y páginas, asegurando una única fuente de verdad para el estado de autenticación en el lado del cliente.
+        *   **Contexto Enriquecido:** El `OrganizationContext` se mejoró para obtener y proveer también el `rol` del usuario, simplificando aún más los componentes que dependen de esta información, como el `Sidebar`.

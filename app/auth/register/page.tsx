@@ -1,6 +1,6 @@
 'use client';
 
-import { supabase } from '@/app/lib/supabase';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { useState } from 'react';
 import Link from 'next/link';
 
@@ -12,6 +12,7 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const supabase = createClientComponentClient();
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();

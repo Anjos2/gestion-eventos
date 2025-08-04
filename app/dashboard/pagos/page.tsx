@@ -1,9 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { supabase } from '@/app/lib/supabase';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { useOrganization } from '@/app/context/OrganizationContext';
 import { FiCheckCircle, FiSearch } from 'react-icons/fi';
 import Link from 'next/link';
+import toast from 'react-hot-toast';
 
 // Definición de tipos actualizada
 interface ServicioPendiente {
@@ -23,6 +25,7 @@ interface PersonalConPendientes {
 }
 
 export default function PagosPage() {
+  const { organization, session } = useOrganization();
   const [personalConPagos, setPersonalConPagos] = useState<PersonalConPendientes[]>([]);
   const [loading, setLoading] = useState(true);
   const [pagando, setPagando] = useState(false);
@@ -30,21 +33,13 @@ export default function PagosPage() {
   const [discounts, setDiscounts] = useState<Record<number, number>>({});
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedServices, setSelectedServices] = useState<Record<number, number[]>>({});
+  const supabase = createClientComponentClient();
 
   const fetchPagosPendientes = async () => {
+    if (!organization) return;
+
     try {
       setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Usuario no autenticado. Redirigiendo...');
-
-      const { data: adminData, error: adminError } = await supabase
-        .from('Personal')
-        .select('id_organizacion')
-        .eq('supabase_user_id', user.id)
-        .single();
-
-      if (adminError || !adminData) throw new Error('No se pudo encontrar la organización del administrador.');
-
       const { data: pagosPendientes, error: pagosError } = await supabase
         .from('Evento_Servicios_Asignados')
         .select(`
@@ -64,7 +59,7 @@ export default function PagosPage() {
           ),
           Servicios!inner(nombre)
         `)
-        .eq('id_organizacion', adminData.id_organizacion)
+        .eq('id_organizacion', organization.id)
         .eq('estado_pago', 'PENDIENTE')
         .eq('Participaciones_Personal.Eventos_Contrato.Contratos.estado', 'COMPLETADO');
 
@@ -117,9 +112,6 @@ export default function PagosPage() {
 
     } catch (err: any) {
       setError(err.message);
-      if (err.message.includes('autenticado')) {
-        window.location.href = '/auth/login';
-      }
     } finally {
       setLoading(false);
     }
@@ -127,7 +119,7 @@ export default function PagosPage() {
 
   useEffect(() => {
     fetchPagosPendientes();
-  }, []);
+  }, [organization, supabase]);
 
   const handleDiscountChange = (id: number, value: string) => {
     const percentage = parseFloat(value);
@@ -167,37 +159,57 @@ export default function PagosPage() {
   const handleCreateLotePago = async (personal: PersonalConPendientes) => {
     const selectedForPerson = selectedServices[personal.id_personal] || [];
     if (selectedForPerson.length === 0) {
-      alert('Por favor, seleccione al menos un servicio para pagar.');
+      toast.error('Por favor, seleccione al menos un servicio para pagar.');
       return;
     }
 
     const servicesToPay = personal.servicios_pendientes.filter(s => selectedForPerson.includes(s.id_servicio_asignado));
     const monto_total = servicesToPay.reduce((acc, service) => acc + calculateFinalAmount(service), 0);
 
-    if (!window.confirm(`¿Está seguro de crear un lote de pago para ${personal.nombre_personal} por S/${monto_total.toFixed(2)}? Esta acción es irreversible.`)) {
-      return;
-    }
+    toast((t) => (
+      <span>
+        ¿Seguro que quieres crear un lote de pago para <b>{personal.nombre_personal}</b> por <b>S/{monto_total.toFixed(2)}</b>?
+        <div className="flex gap-2 mt-2">
+          <button 
+            className="bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-3 rounded-lg text-sm"
+            onClick={() => {
+              toast.dismiss(t.id);
+              performCreateLote(personal, servicesToPay, monto_total);
+            }}
+          >
+            Confirmar
+          </button>
+          <button 
+            className="bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-3 rounded-lg text-sm"
+            onClick={() => toast.dismiss(t.id)}
+          >
+            Cancelar
+          </button>
+        </div>
+      </span>
+    ));
+  };
 
+  const performCreateLote = async (personal: PersonalConPendientes, servicesToPay: ServicioPendiente[], monto_total: number) => {
     setPagando(true);
-    setError(null);
+    const toastId = toast.loading('Procesando pago...');
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Usuario no autenticado.');
+      if (!session || !organization) throw new Error('No se pudo obtener la sesión o la organización.');
 
       const { data: adminData, error: adminError } = await supabase
         .from('Personal')
-        .select('id, id_organizacion')
-        .eq('supabase_user_id', user.id)
+        .select('id')
+        .eq('supabase_user_id', session.user.id)
         .single();
       if (adminError || !adminData) throw new Error('No se pudo encontrar al administrador.');
 
-      const { id: id_personal_administrativo, id_organizacion } = adminData;
+      const { id: id_personal_administrativo } = adminData;
 
       const { data: lotePago, error: loteError } = await supabase
         .from('Lotes_Pago')
         .insert({
-          id_organizacion,
+          id_organizacion: organization.id,
           id_personal: personal.id_personal,
           id_personal_administrativo,
           monto_total,
@@ -212,7 +224,7 @@ export default function PagosPage() {
       const id_lote_pago = lotePago.id;
 
       const detallesLote = servicesToPay.map(service => ({
-        id_organizacion,
+        id_organizacion: organization.id,
         id_lote_pago,
         id_evento_servicio_asignado: service.id_servicio_asignado,
         monto_pagado: calculateFinalAmount(service),
@@ -226,11 +238,11 @@ export default function PagosPage() {
       const { error: updateError } = await supabase
         .from('Evento_Servicios_Asignados')
         .update({ estado_pago: 'EN_LOTE' })
-        .in('id', selectedForPerson);
+        .in('id', servicesToPay.map(s => s.id_servicio_asignado));
 
       if (updateError) throw new Error(`Error al actualizar el estado de los servicios: ${updateError.message}`);
 
-      alert(`¡Lote de pago enviado a aprobación para ${personal.nombre_personal}!`);
+      toast.success(`¡Lote de pago enviado a aprobación para ${personal.nombre_personal}!`, { id: toastId });
       fetchPagosPendientes(); // Re-fetch data to update the list
       setSelectedServices(prev => {
         const newSelections = { ...prev };
@@ -239,12 +251,12 @@ export default function PagosPage() {
       });
 
     } catch (err: any) {
-      setError(`Error al procesar el pago: ${err.message}`);
-      alert(`Error al procesar el pago: ${err.message}`);
+      toast.error(`Error al procesar el pago: ${err.message}`, { id: toastId });
     } finally {
       setPagando(false);
     }
-  };
+  }
+
 
   const filteredPersonal = personalConPagos.filter(p => 
     p.nombre_personal.toLowerCase().includes(searchTerm.toLowerCase())

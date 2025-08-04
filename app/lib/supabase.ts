@@ -1,7 +1,4 @@
-
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Este archivo se ha vaciado intencionadamente.
+// Para interactuar con Supabase desde componentes de cliente,
+// utiliza createClientComponentClient() de @supabase/auth-helpers-nextjs.
+// Para Server Actions o Route Handlers, usa createServerActionClient() o createRouteHandlerClient().

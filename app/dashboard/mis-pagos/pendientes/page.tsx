@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { supabase } from '@/app/lib/supabase';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { useOrganization } from '@/app/context/OrganizationContext';
 import { FiInbox, FiCalendar, FiFileText, FiDollarSign } from 'react-icons/fi';
 import Link from 'next/link';
 
@@ -17,20 +18,21 @@ interface ServicioPendiente {
 }
 
 export default function ServiciosPendientesPage() {
+  const { session } = useOrganization();
   const [servicios, setServicios] = useState<ServicioPendiente[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const supabase = createClientComponentClient();
 
   const fetchServiciosPendientes = async () => {
+    if (!session) return;
+
     try {
       setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Usuario no autenticado.');
-
       const { data: personalData, error: personalError } = await supabase
         .from('Personal')
         .select('id')
-        .eq('supabase_user_id', user.id)
+        .eq('supabase_user_id', session.user.id)
         .single();
 
       if (personalError || !personalData) throw new Error('No se pudo encontrar tu registro de personal.');
@@ -59,7 +61,7 @@ export default function ServiciosPendientesPage() {
 
   useEffect(() => {
     fetchServiciosPendientes();
-  }, []);
+  }, [session, supabase]);
 
   if (loading) return <div className="text-center p-8"><p className="text-slate-400">Cargando servicios pendientes...</p></div>;
   if (error) return <div className="bg-red-900 text-red-200 p-4 rounded-lg">Error: {error}</div>;

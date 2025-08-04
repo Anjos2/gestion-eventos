@@ -3,10 +3,11 @@
 import Link from 'next/link';
 import { useEffect, useState, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { supabase } from '@/app/lib/supabase';
-import type { User } from '@supabase/supabase-js';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { useOrganization } from '@/app/context/OrganizationContext';
 import Pagination from '@/app/components/ui/Pagination';
 import AsyncSelect from 'react-select/async';
+import toast from 'react-hot-toast';
 
 // --- CONSTANTES ---
 const ITEMS_PER_PAGE = 10;
@@ -78,7 +79,7 @@ const AddContratoForm = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!idContratador || !idTipoContrato || !fechaHoraEvento) {
-      alert('Por favor, completa todos los campos.');
+      toast.error('Por favor, completa todos los campos.');
       return;
     }
     onAddContrato({ 
@@ -92,9 +93,9 @@ const AddContratoForm = ({
   };
 
   return (
-    <div className="bg-slate-800 p-6 rounded-xl shadow-lg mb-8 border border-slate-700">
+    <div className="bg-slate-800 p-4 md:p-6 rounded-xl shadow-lg mb-8 border border-slate-700">
       <h2 className="text-2xl font-bold text-white mb-4">Registrar nuevo contrato</h2>
-      <form onSubmit={handleSubmit} className="grid md:grid-cols-4 gap-4 items-end">
+      <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
         <div>
           <label htmlFor="id_contratador" className="block text-sm font-medium text-slate-400 mb-1">Contratador</label>
           <AsyncSelect
@@ -120,57 +121,61 @@ const AddContratoForm = ({
           <label htmlFor="fecha_hora_evento" className="block text-sm font-medium text-slate-400 mb-1">Fecha y hora</label>
           <input id="fecha_hora_evento" type="datetime-local" value={fechaHoraEvento} onChange={(e) => setFechaHoraEvento(e.target.value)} className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white" />
         </div>
-        <button type="submit" className="w-full md:w-auto justify-self-start px-6 py-2 bg-sky-600 text-white font-semibold rounded-lg hover:bg-sky-700">Registrar</button>
+        <button type="submit" className="w-full lg:w-auto justify-self-stretch lg:justify-self-start px-6 py-2 bg-sky-600 text-white font-semibold rounded-lg hover:bg-sky-700">Registrar</button>
       </form>
     </div>
   );
 };
 
 const ContratosTable = ({ contratos }: { contratos: Contrato[] }) => (
-  <div className="bg-slate-800 rounded-xl shadow-lg overflow-hidden border border-slate-700">
-    <table className="min-w-full divide-y divide-slate-700">
-      <thead className="bg-slate-900">
-        <tr>
-          <th className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase">Cliente</th>
-          <th className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase">Tipo</th>
-          <th className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase">Fecha Evento</th>
-          <th className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase">Responsable</th>
-          <th className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase">Estado</th>
-          <th className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase">Asignación</th>
-        </tr>
-      </thead>
-      <tbody className="bg-slate-800 divide-y divide-slate-700">
-        {contratos.length > 0 ? contratos.map((c) => (
-          <tr key={c.id} className={`hover:bg-slate-700 ${c.estado_asignacion === 'PENDIENTE' ? 'bg-yellow-900/20' : ''}`}>
-            <td className="px-6 py-4 text-sm text-white"><Link href={`/dashboard/contratos/${c.id}`} className="hover:underline">{c.Contratadores?.nombre}</Link></td>
-            <td className="px-6 py-4 text-sm text-slate-300"><Link href={`/dashboard/contratos/${c.id}`} className="hover:underline">{c.Tipos_Contrato?.nombre}</Link></td>
-            <td className="px-6 py-4 text-sm text-slate-300"><Link href={`/dashboard/contratos/${c.id}`} className="hover:underline">{new Date(c.fecha_hora_evento).toLocaleString()}</Link></td>
-            <td className="px-6 py-4 text-sm text-slate-300">{c.Personal?.nombre}</td>
-            <td className="px-6 py-4 text-sm"><span className="px-3 py-1 text-xs font-semibold rounded-full bg-blue-900 text-blue-200">{c.estado}</span></td>
-            <td className="px-6 py-4 text-sm">
-              <span className={`px-3 py-1 text-xs font-semibold rounded-full ${c.estado_asignacion === 'COMPLETO' ? 'bg-green-900 text-green-200' : 'bg-yellow-900 text-yellow-200'}`}>
-                {c.estado_asignacion}
-              </span>
-            </td>
+  <div className="bg-slate-800 rounded-xl shadow-lg border border-slate-700">
+    <div className="overflow-x-auto">
+      <table className="min-w-full divide-y divide-slate-700">
+        <thead className="bg-slate-900">
+          <tr>
+            <th className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase whitespace-nowrap">Cliente</th>
+            <th className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase whitespace-nowrap">Tipo de Contrato</th>
+            <th className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase whitespace-nowrap">Fecha del Evento</th>
+            <th className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase whitespace-nowrap">Responsable</th>
+            <th className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase whitespace-nowrap">Estado</th>
+            <th className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase whitespace-nowrap">Asignación</th>
           </tr>
-        )) : (
-          <tr><td colSpan={6} className="text-center py-10 text-slate-400">No hay contratos registrados.</td></tr>
-        )}
-      </tbody>
-    </table>
+        </thead>
+        <tbody className="bg-slate-800 divide-y divide-slate-700">
+          {contratos.length > 0 ? contratos.map((c) => (
+            <tr key={c.id} className={`hover:bg-slate-700 ${c.estado_asignacion === 'PENDIENTE' ? 'bg-yellow-900/20' : ''}`}>
+              <td className="px-6 py-4 text-sm text-white whitespace-nowrap"><Link href={`/dashboard/contratos/${c.id}`} className="hover:underline">{c.Contratadores?.nombre}</Link></td>
+              <td className="px-6 py-4 text-sm text-slate-300 whitespace-nowrap"><Link href={`/dashboard/contratos/${c.id}`} className="hover:underline">{c.Tipos_Contrato?.nombre}</Link></td>
+              <td className="px-6 py-4 text-sm text-slate-300 whitespace-nowrap"><Link href={`/dashboard/contratos/${c.id}`} className="hover:underline">{new Date(c.fecha_hora_evento).toLocaleString()}</Link></td>
+              <td className="px-6 py-4 text-sm text-slate-300 whitespace-nowrap">{c.Personal?.nombre}</td>
+              <td className="px-6 py-4 text-sm whitespace-nowrap"><span className="px-3 py-1 text-xs font-semibold rounded-full bg-blue-900 text-blue-200">{c.estado}</span></td>
+              <td className="px-6 py-4 text-sm whitespace-nowrap">
+                <Link href={`/dashboard/contratos/${c.id}`} className="hover:underline">
+                  <span className={`px-3 py-1 text-xs font-semibold rounded-full ${c.estado_asignacion === 'COMPLETO' ? 'bg-green-900 text-green-200' : 'bg-yellow-900 text-yellow-200'}`}>
+                    {c.estado_asignacion}
+                  </span>
+                </Link>
+              </td>
+            </tr>
+          )) : (
+            <tr><td colSpan={6} className="text-center py-10 text-slate-400">No hay contratos registrados.</td></tr>
+          )}
+        </tbody>
+      </table>
+    </div>
   </div>
 );
 
 // --- COMPONENTE DE LÓGICA Y CARGA DE DATOS ---
 function ContratosPageContent() {
   const searchParams = useSearchParams();
-  const [user, setUser] = useState<User | null>(null);
+  const { organization, session } = useOrganization();
   const [contratos, setContratos] = useState<Contrato[]>([]);
   const [tiposContrato, setTiposContrato] = useState<TipoContrato[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [totalCount, setTotalCount] = useState(0);
-  const [orgId, setOrgId] = useState<number | null>(null);
+  const supabase = createClientComponentClient();
 
   const currentPage = parseInt(searchParams.get('page') || '1', 10);
 
@@ -192,15 +197,15 @@ function ContratosPageContent() {
       setContratos(data || []);
       setTotalCount(count || 0);
     }
-  }, []);
+  }, [supabase]);
 
   const loadContratadores = async (inputValue: string, callback: (options: SelectOption[]) => void) => {
-    if (!orgId) return callback([]);
+    if (!organization) return callback([]);
 
     const { data, error } = await supabase
       .from('Contratadores')
       .select('id, nombre')
-      .eq('id_organizacion', orgId)
+      .eq('id_organizacion', organization.id)
       .eq('es_activo', true)
       .ilike('nombre', `%${inputValue}%`)
       .limit(20);
@@ -216,21 +221,15 @@ function ContratosPageContent() {
 
   useEffect(() => {
     const fetchInitialData = async () => {
+      if (!organization) return;
+
       try {
         setLoading(true);
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error('Usuario no autenticado');
-        setUser(user);
-
-        const { data: adminData } = await supabase.from('Personal').select('id_organizacion').eq('supabase_user_id', user.id).single();
-        if (!adminData) throw new Error('No se encontró la organización del admin.');
-        setOrgId(adminData.id_organizacion);
-
-        const { data: tiposContratoRes, error: tiposContratoError } = await supabase.from('Tipos_Contrato').select('id, nombre').eq('id_organizacion', adminData.id_organizacion).eq('es_activo', true);
+        const { data: tiposContratoRes, error: tiposContratoError } = await supabase.from('Tipos_Contrato').select('id, nombre').eq('id_organizacion', organization.id).eq('es_activo', true);
         if (tiposContratoError) throw tiposContratoError;
         setTiposContrato(tiposContratoRes || []);
 
-        await fetchContratos(adminData.id_organizacion, currentPage);
+        await fetchContratos(organization.id, currentPage);
 
       } catch (err: any) {
         setError(err.message);
@@ -239,28 +238,29 @@ function ContratosPageContent() {
       }
     };
     fetchInitialData();
-  }, [fetchContratos, currentPage]);
+  }, [organization, fetchContratos, currentPage, supabase]);
 
   const handleAddContrato = async (contratoData: any) => {
-    if (!user) return;
+    if (!session || !organization) return;
+    const toastId = toast.loading('Registrando contrato...');
     try {
-      const { data: adminData } = await supabase.from('Personal').select('id, id_organizacion').eq('supabase_user_id', user.id).single();
+      const { data: adminData } = await supabase.from('Personal').select('id').eq('supabase_user_id', session.user.id).single();
       if (!adminData) throw new Error('No se pudo obtener el perfil del admin.');
 
-      const { data: newContrato, error: contratoError } = await supabase.from('Contratos').insert({ ...contratoData, id_organizacion: adminData.id_organizacion, id_personal_administrativo: adminData.id, created_by: adminData.id, estado: 'ACTIVO', estado_asignacion: 'PENDIENTE' }).select('id').single();
+      const { data: newContrato, error: contratoError } = await supabase.from('Contratos').insert({ ...contratoData, id_organizacion: organization.id, id_personal_administrativo: adminData.id, created_by: adminData.id, estado: 'ACTIVO', estado_asignacion: 'PENDIENTE' }).select('id').single();
       if (contratoError) throw contratoError;
       if (!newContrato) throw new Error('No se pudo obtener el ID del nuevo contrato.');
 
-      const { error: eventoError } = await supabase.from('Eventos_Contrato').insert({ id_contrato: newContrato.id, id_organizacion: adminData.id_organizacion });
+      const { error: eventoError } = await supabase.from('Eventos_Contrato').insert({ id_contrato: newContrato.id, id_organizacion: organization.id });
       if (eventoError) {
         await supabase.from('Contratos').delete().eq('id', newContrato.id);
         throw eventoError;
       }
 
-      await fetchContratos(adminData.id_organizacion, 1);
-      alert('Contrato y evento registrados con éxito!');
+      await fetchContratos(organization.id, 1);
+      toast.success('Contrato y evento registrados con éxito!', { id: toastId });
     } catch (err: any) {
-      alert(`Error al registrar el contrato: ${err.message}`);
+      toast.error(`Error al registrar el contrato: ${err.message}`, { id: toastId });
     }
   };
 
@@ -285,6 +285,7 @@ function ContratosPageContent() {
     </div>
   );
 }
+
 
 // --- COMPONENTE PRINCIPAL DE LA PÁGINA (con Suspense) ---
 export default function ContratosPage() {

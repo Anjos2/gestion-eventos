@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
-import { supabase } from '@/app/lib/supabase';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { FiUser, FiLock, FiMail } from 'react-icons/fi';
@@ -14,6 +14,7 @@ function RegisterPersonalForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const orgId = searchParams.get('org_id');
+  const supabase = createClientComponentClient();
 
   useEffect(() => {
     if (!orgId) {

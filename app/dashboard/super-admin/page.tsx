@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { supabase } from '@/app/lib/supabase';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import toast from 'react-hot-toast';
 
 interface Organizacion {
   id: number;
@@ -17,6 +18,7 @@ export default function SuperAdminPage() {
   const [error, setError] = useState<string | null>(null);
   const [precioPorRegistro, setPrecioPorRegistro] = useState<string>('0');
   const [editPrecio, setEditPrecio] = useState<boolean>(false);
+  const supabase = createClientComponentClient();
 
   const fetchConfig = async () => {
     const { data, error } = await supabase
@@ -58,71 +60,120 @@ export default function SuperAdminPage() {
   useEffect(() => {
     fetchOrganizaciones();
     fetchConfig();
-  }, []);
+  }, [supabase]);
 
   const handleGuardarPrecio = async () => {
+    const toastId = toast.loading('Actualizando precio...');
     const { error } = await supabase
       .from('Configuracion_Plataforma')
       .update({ valor: precioPorRegistro })
       .eq('clave', 'precio_por_registro');
 
     if (error) {
-      alert('Error al actualizar el precio.');
+      toast.error('Error al actualizar el precio.', { id: toastId });
     } else {
-      alert('Precio actualizado con éxito.');
+      toast.success('Precio actualizado con éxito.', { id: toastId });
       setEditPrecio(false);
     }
   };
 
   const toggleEstadoOrganizacion = async (id: number, estadoActual: string) => {
     const nuevoEstado = estadoActual === 'ACTIVA' ? 'SUSPENDIDA' : 'ACTIVA';
-    if (window.confirm(`¿Estás seguro de que quieres cambiar el estado a ${nuevoEstado}?`)) {
-      const { error } = await supabase
-        .from('Organizaciones')
-        .update({ estado: nuevoEstado })
-        .eq('id', id);
-
-      if (error) {
-        alert('Error al cambiar el estado de la organización.');
-      } else {
-        alert('Estado actualizado con éxito.');
-        fetchOrganizaciones();
-      }
-    }
+    toast((t) => (
+      <span>
+        ¿Seguro que quieres cambiar el estado a <b>{nuevoEstado}</b>?
+        <div className="flex gap-2 mt-2">
+          <button 
+            className="bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-3 rounded-lg text-sm"
+            onClick={() => {
+              toast.dismiss(t.id);
+              performToggleEstado(id, nuevoEstado);
+            }}
+          >
+            Confirmar
+          </button>
+          <button 
+            className="bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-3 rounded-lg text-sm"
+            onClick={() => toast.dismiss(t.id)}
+          >
+            Cancelar
+          </button>
+        </div>
+      </span>
+    ));
   };
+
+  const performToggleEstado = async (id: number, nuevoEstado: string) => {
+    const toastId = toast.loading('Actualizando estado...');
+    const { error } = await supabase
+      .from('Organizaciones')
+      .update({ estado: nuevoEstado })
+      .eq('id', id);
+
+    if (error) {
+      toast.error('Error al cambiar el estado de la organización.', { id: toastId });
+    } else {
+      toast.success('Estado actualizado con éxito.', { id: toastId });
+      fetchOrganizaciones();
+    }
+  }
 
   const handleCerrarCiclo = async (organizacionId: number, conteoActual: number) => {
-    if (window.confirm(`¿Estás seguro de que quieres cerrar el ciclo de facturación para esta organización? Se facturarán ${conteoActual} registros.`)) {
-      // 1. Insertar en Historial_Facturacion
-      const { error: historialError } = await supabase
-        .from('Historial_Facturacion')
-        .insert({
-          id_organizacion: organizacionId,
-          registros_facturados: conteoActual
-        });
-
-      if (historialError) {
-        alert('Error al guardar en el historial de facturación: ' + historialError.message);
-        return;
-      }
-
-      // 2. Resetear el contador
-      const { error: contadorError } = await supabase
-        .from('Contadores_Uso')
-        .update({
-          conteo_registros_nuevos: 0,
-          ultimo_reseteo: new Date().toISOString(),
-        })
-        .eq('id_organizacion', organizacionId);
-
-      if (contadorError) {
-        alert('Error al resetear el contador de uso: ' + contadorError.message);
-      } else {
-        alert('Ciclo de facturación cerrado con éxito.');
-        fetchOrganizaciones(); // Recargar datos
-      }
-    }
+    toast((t) => (
+      <span>
+        ¿Seguro que quieres cerrar el ciclo de facturación? Se facturarán <b>{conteoActual}</b> registros.
+        <div className="flex gap-2 mt-2">
+          <button 
+            className="bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-3 rounded-lg text-sm"
+            onClick={() => {
+              toast.dismiss(t.id);
+              performCerrarCiclo(organizacionId, conteoActual);
+            }}
+          >
+            Confirmar
+          </button>
+          <button 
+            className="bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-3 rounded-lg text-sm"
+            onClick={() => toast.dismiss(t.id)}
+          >
+            Cancelar
+          </button>
+        </div>
+      </span>
+    ));
   };
+
+  const performCerrarCiclo = async (organizacionId: number, conteoActual: number) => {
+    const toastId = toast.loading('Cerrando ciclo de facturación...');
+    // 1. Insertar en Historial_Facturacion
+    const { error: historialError } = await supabase
+      .from('Historial_Facturacion')
+      .insert({
+        id_organizacion: organizacionId,
+        registros_facturados: conteoActual
+      });
+
+    if (historialError) {
+      toast.error('Error al guardar en el historial de facturación: ' + historialError.message, { id: toastId });
+      return;
+    }
+
+    // 2. Resetear el contador
+    const { error: contadorError } = await supabase
+      .from('Contadores_Uso')
+      .update({
+        conteo_registros_nuevos: 0,
+        ultimo_reseteo: new Date().toISOString(),
+      })
+      .eq('id_organizacion', organizacionId);
+
+    if (contadorError) {
+      toast.error('Error al resetear el contador de uso: ' + contadorError.message, { id: toastId });
+    } else {
+      toast.success('Ciclo de facturación cerrado con éxito.', { id: toastId });
+      fetchOrganizaciones(); // Recargar datos
+    }
+  }
 
   if (loading) return <p className="text-slate-400">Cargando panel de super-admin...</p>;
   if (error) return <p className="text-red-400">{error}</p>;

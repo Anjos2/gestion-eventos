@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, Fragment } from 'react';
-import { supabase } from '@/app/lib/supabase';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { useParams, useRouter } from 'next/navigation';
 import { FiPlus, FiArrowLeft, FiCheckCircle } from 'react-icons/fi';
 import Link from 'next/link';
@@ -121,6 +121,7 @@ export default function ContratoDetailPage() {
   const [currentParticipacionId, setCurrentParticipacionId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const supabase = createClientComponentClient();
 
   // --- DATA FETCHING ---
   useEffect(() => {
@@ -163,7 +164,7 @@ export default function ContratoDetailPage() {
       }
     };
     fetchAllData();
-  }, [id]);
+  }, [id, supabase]);
 
   const loadPersonal = async (inputValue: string): Promise<SelectOption[]> => {
     if (!contrato) return [];

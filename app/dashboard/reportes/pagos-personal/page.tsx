@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/app/lib/supabase';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { useOrganization } from '@/app/context/OrganizationContext';
 import { FiSearch, FiDownload } from 'react-icons/fi';
 import * as XLSX from 'xlsx';
 
@@ -28,6 +29,7 @@ interface LotePago {
 }
 
 export default function PagosPersonalReportePage() {
+  const { organization } = useOrganization();
   const [personalList, setPersonalList] = useState<Personal[]>([]);
   const [selectedPersonal, setSelectedPersonal] = useState<string>('');
   const [startDate, setStartDate] = useState<string>('');
@@ -35,6 +37,7 @@ export default function PagosPersonalReportePage() {
   const [reportData, setReportData] = useState<LotePago[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const supabase = createClientComponentClient();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredPersonal, setFilteredPersonal] = useState<Personal[]>([]);
@@ -42,33 +45,24 @@ export default function PagosPersonalReportePage() {
 
   useEffect(() => {
     const fetchPersonal = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!organization) return;
 
-      const { data: adminData } = await supabase
+      const { data, error } = await supabase
         .from('Personal')
-        .select('id_organizacion')
-        .eq('supabase_user_id', user.id)
-        .single();
+        .select('id, nombre')
+        .eq('id_organizacion', organization.id)
+        .eq('rol', 'OPERATIVO')
+        .order('nombre', { ascending: true });
 
-      if (adminData) {
-        const { data, error } = await supabase
-          .from('Personal')
-          .select('id, nombre')
-          .eq('id_organizacion', adminData.id_organizacion)
-          .eq('rol', 'OPERATIVO')
-          .order('nombre', { ascending: true });
-
-        if (error) {
-          console.error('Error fetching personal:', error);
-        } else {
-          setPersonalList(data || []);
-          setFilteredPersonal(data || []);
-        }
+      if (error) {
+        console.error('Error fetching personal:', error);
+      } else {
+        setPersonalList(data || []);
+        setFilteredPersonal(data || []);
       }
     };
     fetchPersonal();
-  }, []);
+  }, [organization, supabase]);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const term = e.target.value;
@@ -157,20 +151,20 @@ export default function PagosPersonalReportePage() {
     const totalPagado = reportData.reduce((sum, lote) => sum + lote.monto_total, 0);
 
     // 1. Preparar datos
-    const title = `Reporte de Pagos para: ${personalSeleccionado?.nombre || 'N/A'}`;
-    const dateRange = `Período: ${new Date(startDate).toLocaleDateString()} - ${new Date(endDate).toLocaleDateString()}`;
+    const title = `Reporte de pagos para: ${personalSeleccionado?.nombre || 'N/A'}`;
+    const dateRange = `Periodo: ${new Date(startDate).toLocaleDateString()} - ${new Date(endDate).toLocaleDateString()}`;
 
     const summary = [
-      { Key: 'Total de Lotes de Pago', Value: reportData.length },
-      { Key: 'Monto Total Pagado', Value: `S/${totalPagado.toFixed(2)}` },
+      { Key: 'Total de lotes de pago', Value: reportData.length },
+      { Key: 'Monto total pagado', Value: `S/${totalPagado.toFixed(2)}` },
     ];
 
     const details = reportData.flatMap(lote => 
       lote.Detalles_Lote_Pago.map(detalle => ({
         'Lote ID': lote.id,
-        'Fecha de Pago': new Date(lote.fecha_pago + 'T00:00:00').toLocaleDateString(),
-        'Servicio Pagado': detalle.Evento_Servicios_Asignados.Servicios.nombre,
-        'Monto Pagado': { v: detalle.monto_pagado, t: 'n', z: '"S/"#,##0.00' },
+        'Fecha de pago': new Date(lote.fecha_pago + 'T00:00:00').toLocaleDateString(),
+        'Servicio pagado': detalle.Evento_Servicios_Asignados.Servicios.nombre,
+        'Monto pagado': { v: detalle.monto_pagado, t: 'n', z: '"S/"#,##0.00' },
         'Asistencia': detalle.estado_asistencia_registrado,
         'Descuento (%)': detalle.descuento_aplicado_pct || 0,
       }))
@@ -181,11 +175,11 @@ export default function PagosPersonalReportePage() {
     finalData.push([title]);
     finalData.push([dateRange]);
     finalData.push([]); // Spacer
-    finalData.push(['Resumen del Período']);
+    finalData.push(['Resumen del periodo']);
     finalData = finalData.concat(summary.map(s => [s.Key, s.Value]));
     finalData.push([]); // Spacer
-    finalData.push(['Detalle de Pagos']);
-    const detailsHeader = ['Lote ID', 'Fecha de Pago', 'Servicio Pagado', 'Monto Pagado', 'Asistencia', 'Descuento (%)'];
+    finalData.push(['Detalle de pagos']);
+    const detailsHeader = ['Lote ID', 'Fecha de pago', 'Servicio pagado', 'Monto pagado', 'Asistencia', 'Descuento (%)'];
     finalData.push(detailsHeader);
     details.forEach(item => finalData.push(Object.values(item)));
 
@@ -207,7 +201,7 @@ export default function PagosPersonalReportePage() {
 
     // 4. Crear y descargar el libro
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Reporte de Pagos");
+    XLSX.utils.book_append_sheet(wb, ws, "Reporte de pagos");
     XLSX.writeFile(wb, `ReportePagos_${personalSeleccionado?.nombre.replace(/ /g, '_')}.xlsx`);
   };
 

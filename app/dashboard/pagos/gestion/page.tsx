@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { supabase } from '@/app/lib/supabase';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { useOrganization } from '@/app/context/OrganizationContext';
 import { FiAlertTriangle, FiClock, FiXCircle } from 'react-icons/fi';
 
 // --- TIPOS DE DATOS ---
@@ -15,24 +16,21 @@ interface LoteGestion {
 
 // --- COMPONENTE PRINCIPAL: Pagina de Gestión de Lotes ---
 export default function GestionLotesPage() {
+  const { organization } = useOrganization();
   const [lotesEnGestion, setLotesEnGestion] = useState<LoteGestion[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('pendientes');
+  const supabase = createClientComponentClient();
 
   const fetchData = async () => {
+    if (!organization) return;
+
     try {
       setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Usuario no autenticado.');
-
-      const { data: adminData, error: adminError } = await supabase.from('Personal').select('id_organizacion').eq('supabase_user_id', user.id).single();
-      if (adminError || !adminData) throw new Error('No se pudo encontrar la organización del administrador.');
-      const orgId = adminData.id_organizacion;
-
       const { data: lotesData, error: lotesError } = await supabase
         .from('Lotes_Pago')
         .select(`id, monto_total, estado, Personal!Lotes_Pago_id_personal_fkey(id, nombre)`)
-        .eq('id_organizacion', orgId)
+        .eq('id_organizacion', organization.id)
         .in('estado', ['PENDIENTE_APROBACION', 'RECLAMADO']);
       if (lotesError) throw new Error(lotesError.message);
 
@@ -70,7 +68,7 @@ export default function GestionLotesPage() {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [organization, supabase]);
 
   const handleAnularLote = async (loteId: number) => {
     if (!window.confirm(`¿Está seguro de anular el Lote #${loteId}? Los servicios volverán a estar pendientes de pago.`)) return;

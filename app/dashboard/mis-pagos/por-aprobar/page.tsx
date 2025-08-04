@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { supabase } from '@/app/lib/supabase';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { useOrganization } from '@/app/context/OrganizationContext';
 import { FiAlertTriangle, FiCheck, FiThumbsDown, FiThumbsUp } from 'react-icons/fi';
 
 // Tipos de datos
@@ -22,21 +23,22 @@ interface DetalleLotePago {
 }
 
 export default function PorAprobarPage() {
+  const { session } = useOrganization();
   const [lotes, setLotes] = useState<LotePago[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [processing, setProcessing] = useState<number | null>(null);
+  const supabase = createClientComponentClient();
 
   const fetchMisPagos = async () => {
+    if (!session) return;
+
     try {
       setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Usuario no autenticado.');
-
       const { data: personalData, error: personalError } = await supabase
         .from('Personal')
         .select('id')
-        .eq('supabase_user_id', user.id)
+        .eq('supabase_user_id', session.user.id)
         .single();
 
       if (personalError || !personalData) throw new Error('No se pudo encontrar tu registro de personal.');
@@ -92,7 +94,7 @@ export default function PorAprobarPage() {
 
   useEffect(() => {
     fetchMisPagos();
-  }, []);
+  }, [session, supabase]);
 
   const handleUpdateLoteStatus = async (loteId: number, newStatus: 'PAGADO' | 'RECLAMADO') => {
     const confirmationText = newStatus === 'PAGADO' 

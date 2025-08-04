@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/app/lib/supabase';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { useOrganization } from '@/app/context/OrganizationContext';
 import { FiSearch, FiCalendar, FiUser, FiFileText, FiList, FiCheckCircle, FiXCircle, FiClock, FiDownload } from 'react-icons/fi';
 import * as XLSX from 'xlsx';
 
@@ -29,6 +30,7 @@ interface AsistenciaSummary {
 }
 
 export default function ParticipacionPersonalReportePage() {
+  const { organization } = useOrganization();
   const [personalList, setPersonalList] = useState<Personal[]>([]);
   const [selectedPersonal, setSelectedPersonal] = useState<string>('');
   const [startDate, setStartDate] = useState<string>('');
@@ -37,6 +39,7 @@ export default function ParticipacionPersonalReportePage() {
   const [summary, setSummary] = useState<AsistenciaSummary | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const supabase = createClientComponentClient();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredPersonal, setFilteredPersonal] = useState<Personal[]>([]);
@@ -44,33 +47,24 @@ export default function ParticipacionPersonalReportePage() {
 
   useEffect(() => {
     const fetchPersonal = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!organization) return;
 
-      const { data: adminData } = await supabase
+      const { data, error } = await supabase
         .from('Personal')
-        .select('id_organizacion')
-        .eq('supabase_user_id', user.id)
-        .single();
+        .select('id, nombre')
+        .eq('id_organizacion', organization.id)
+        .eq('rol', 'OPERATIVO')
+        .order('nombre', { ascending: true });
 
-      if (adminData) {
-        const { data, error } = await supabase
-          .from('Personal')
-          .select('id, nombre')
-          .eq('id_organizacion', adminData.id_organizacion)
-          .eq('rol', 'OPERATIVO')
-          .order('nombre', { ascending: true });
-
-        if (error) {
-          console.error('Error fetching personal:', error);
-        } else {
-          setPersonalList(data || []);
-          setFilteredPersonal(data || []);
-        }
+      if (error) {
+        console.error('Error fetching personal:', error);
+      } else {
+        setPersonalList(data || []);
+        setFilteredPersonal(data || []);
       }
     };
     fetchPersonal();
-  }, []);
+  }, [organization, supabase]);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const term = e.target.value;
@@ -162,23 +156,23 @@ export default function ParticipacionPersonalReportePage() {
     const personalSeleccionado = personalList.find(p => p.id.toString() === selectedPersonal);
 
     // 1. Preparar datos
-    const title = `Reporte de Participación para: ${personalSeleccionado?.nombre || 'N/A'}`;
-    const dateRange = `Período: ${new Date(startDate).toLocaleDateString()} - ${new Date(endDate).toLocaleDateString()}`;
+    const title = `Reporte de participación para: ${personalSeleccionado?.nombre || 'N/A'}`;
+    const dateRange = `Periodo: ${new Date(startDate).toLocaleDateString()} - ${new Date(endDate).toLocaleDateString()}`;
 
     const summaryData = [
-      { Criterio: 'Asistencias Puntuales', Total: summary?.PUNTUAL || 0 },
-      { Criterio: 'Tardanzas Registradas', Total: summary?.TARDANZA || 0 },
-      { Criterio: 'Ausencias Registradas', Total: summary?.AUSENTE || 0 },
+      { Criterio: 'Asistencias puntuales', Total: summary?.PUNTUAL || 0 },
+      { Criterio: 'Tardanzas registradas', Total: summary?.TARDANZA || 0 },
+      { Criterio: 'Ausencias registradas', Total: summary?.AUSENTE || 0 },
     ];
 
     const details = reportData.flatMap(contrato => 
       contrato.servicios.map(servicio => ({
         'Contrato ID': contrato.id_contrato,
-        'Tipo de Contrato': contrato.tipo_contrato_nombre,
-        'Fecha del Evento': new Date(contrato.fecha_hora_evento).toLocaleString(),
+        'Tipo de contrato': contrato.tipo_contrato_nombre,
+        'Fecha del evento': new Date(contrato.fecha_hora_evento).toLocaleString(),
         'Asistencia': contrato.estado_asistencia,
-        'Servicio Realizado': servicio.nombre,
-        'Monto Pactado': { v: servicio.monto_pactado, t: 'n', z: '"S/"#,##0.00' },
+        'Servicio realizado': servicio.nombre,
+        'Monto pactado': { v: servicio.monto_pactado, t: 'n', z: '"S/"#,##0.00' },
       }))
     );
 
@@ -187,11 +181,11 @@ export default function ParticipacionPersonalReportePage() {
     finalData.push([title]);
     finalData.push([dateRange]);
     finalData.push([]); // Spacer
-    finalData.push(['Resumen de Asistencia']);
+    finalData.push(['Resumen de asistencia']);
     finalData = finalData.concat(summaryData.map(s => [s.Criterio, s.Total]));
     finalData.push([]); // Spacer
-    finalData.push(['Detalle de Participaciones']);
-    const detailsHeader = ['Contrato ID', 'Tipo de Contrato', 'Fecha del Evento', 'Asistencia', 'Servicio Realizado', 'Monto Pactado'];
+    finalData.push(['Detalle de participaciones']);
+    const detailsHeader = ['Contrato ID', 'Tipo de contrato', 'Fecha del evento', 'Asistencia', 'Servicio realizado', 'Monto pactado'];
     finalData.push(detailsHeader);
     details.forEach(item => finalData.push(Object.values(item)));
 

@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/app/lib/supabase';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { useOrganization } from '@/app/context/OrganizationContext';
 import { FiFilter, FiCalendar, FiFileText, FiDollarSign, FiTrendingUp, FiTrendingDown, FiBarChart2, FiDownload } from 'react-icons/fi';
 import Link from 'next/link';
 import * as XLSX from 'xlsx';
@@ -38,6 +39,7 @@ interface ReportData {
 }
 
 export default function RentabilidadContratoReportePage() {
+  const { organization } = useOrganization();
   const [tiposContrato, setTiposContrato] = useState<TipoContrato[]>([]);
   const [selectedTipos, setSelectedTipos] = useState<number[]>([]);
   const [startDate, setStartDate] = useState<string>('');
@@ -46,34 +48,26 @@ export default function RentabilidadContratoReportePage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [expandedCard, setExpandedCard] = useState<string | null>(null);
+  const supabase = createClientComponentClient();
 
   useEffect(() => {
     const fetchTiposContrato = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!organization) return;
 
-      const { data: adminData } = await supabase
-        .from('Personal')
-        .select('id_organizacion')
-        .eq('supabase_user_id', user.id)
-        .single();
+      const { data, error } = await supabase
+        .from('Tipos_Contrato')
+        .select('id, nombre')
+        .eq('id_organizacion', organization.id)
+        .order('nombre', { ascending: true });
 
-      if (adminData) {
-        const { data, error } = await supabase
-          .from('Tipos_Contrato')
-          .select('id, nombre')
-          .eq('id_organizacion', adminData.id_organizacion)
-          .order('nombre', { ascending: true });
-
-        if (error) {
-          console.error('Error fetching tipos de contrato:', error);
-        } else {
-          setTiposContrato(data || []);
-        }
+      if (error) {
+        console.error('Error fetching tipos de contrato:', error);
+      } else {
+        setTiposContrato(data || []);
       }
     };
     fetchTiposContrato();
-  }, []);
+  }, [organization, supabase]);
 
   const handleGenerateReport = async () => {
     if (selectedTipos.length === 0 || !startDate || !endDate) {
@@ -191,20 +185,20 @@ export default function RentabilidadContratoReportePage() {
 
     reportData.forEach(data => {
       // 1. Preparar datos
-      const title = `Reporte de Rentabilidad: ${data.tipoContratoNombre}`;
-      const dateRange = `Período: ${new Date(startDate).toLocaleDateString()} - ${new Date(endDate).toLocaleDateString()}`;
+      const title = `Reporte de rentabilidad: ${data.tipoContratoNombre}`;
+      const dateRange = `Periodo: ${new Date(startDate).toLocaleDateString()} - ${new Date(endDate).toLocaleDateString()}`;
       
       const summary = [
-        { Key: 'Contratos en el período', Value: data.cantidadContratos },
-        { Key: 'Ingreso Total', Value: `S/${data.ingresoTotal.toFixed(2)}` },
-        { Key: 'Costo Total', Value: `S/${data.costoTotal.toFixed(2)}` },
-        { Key: 'Ingreso Neto', Value: `S/${data.ingresoNeto.toFixed(2)}` },
+        { Key: 'Contratos en el periodo', Value: data.cantidadContratos },
+        { Key: 'Ingreso total', Value: `S/${data.ingresoTotal.toFixed(2)}` },
+        { Key: 'Costo total', Value: `S/${data.costoTotal.toFixed(2)}` },
+        { Key: 'Ingreso neto', Value: `S/${data.ingresoNeto.toFixed(2)}` },
       ];
 
       const ingresosData = data.detallesIngreso.map(ingreso => ({
         'Contrato ID': ingreso.id,
         'Contratador': ingreso.contratadorNombre,
-        'Fecha Evento': new Date(ingreso.fecha).toLocaleString(),
+        'Fecha evento': new Date(ingreso.fecha).toLocaleString(),
         'Ingreso': { v: ingreso.ingreso, t: 'n', z: '"S/"#,##0.00' },
       }));
 
@@ -212,7 +206,7 @@ export default function RentabilidadContratoReportePage() {
         'Contrato ID ': costo.contratoId, // Espacio para diferenciar de la otra tabla
         'Personal': costo.personalNombre,
         'Servicio': costo.servicioNombre,
-        'Fecha Evento ': new Date(costo.fechaEvento).toLocaleString(), // Espacio
+        'Fecha evento ': new Date(costo.fechaEvento).toLocaleString(), // Espacio
         'Costo': { v: costo.montoPagado, t: 'n', z: '"S/"#,##0.00' },
       }));
 
@@ -221,16 +215,16 @@ export default function RentabilidadContratoReportePage() {
       finalData.push([title]);
       finalData.push([dateRange]);
       finalData.push([]); // Spacer
-      finalData.push(['Resumen del Período']);
+      finalData.push(['Resumen del periodo']);
       finalData = finalData.concat(summary.map(s => [s.Key, s.Value]));
       finalData.push([]); // Spacer
-      finalData.push(['Desglose de Ingresos']);
-      const ingresosHeader = ['Contrato ID', 'Contratador', 'Fecha Evento', 'Ingreso'];
+      finalData.push(['Desglose de ingresos']);
+      const ingresosHeader = ['Contrato ID', 'Contratador', 'Fecha evento', 'Ingreso'];
       finalData.push(ingresosHeader);
       ingresosData.forEach(item => finalData.push(Object.values(item)));
       finalData.push([]); // Spacer
-      finalData.push(['Desglose de Costos']);
-      const costosHeader = ['Contrato ID', 'Personal', 'Servicio', 'Fecha Evento', 'Costo'];
+      finalData.push(['Desglose de costos']);
+      const costosHeader = ['Contrato ID', 'Personal', 'Servicio', 'Fecha evento', 'Costo'];
       finalData.push(costosHeader);
       costosData.forEach(item => finalData.push(Object.values(item)));
 

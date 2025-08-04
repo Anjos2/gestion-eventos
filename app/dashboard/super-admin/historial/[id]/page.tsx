@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { supabase } from '@/app/lib/supabase';
-import { useParams, useRouter } from 'next/navigation';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { useParams } from 'next/navigation';
 import Link from 'next/link';
 
 interface HistorialFacturacion {
@@ -22,6 +22,7 @@ export default function HistorialPage() {
   const [error, setError] = useState<string | null>(null);
   const params = useParams();
   const id = params.id;
+  const supabase = createClientComponentClient();
 
   useEffect(() => {
     if (!id) return;
@@ -61,7 +62,7 @@ export default function HistorialPage() {
     };
 
     fetchHistorial();
-  }, [id]);
+  }, [id, supabase]);
 
   if (loading) return <p className="text-slate-400">Cargando historial...</p>;
   if (error) return <p className="text-red-400">{error}</p>;
