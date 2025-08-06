@@ -34,7 +34,7 @@ interface OperativoDashboardStats {
 interface SuperAdminDashboardStats {
   organizacionesActivas: number;
   organizacionesConAltoConsumo: number;
-  ingresosPotencialesCiclo: number;
+  montoTotalFacturado: number;
 }
 
 // --- Componente de UI ---
@@ -79,20 +79,16 @@ export default function DashboardPage() {
         setLoading(true);
 
         if (isSuperAdmin) {
-          const [orgsActivasRes, orgsAltoConsumoRes, consumoRes, configRes] = await Promise.all([
+          const [orgsActivasRes, orgsAltoConsumoRes, totalFacturadoRes] = await Promise.all([
             supabase.from('Organizaciones').select('id', { count: 'exact', head: true }).eq('estado', 'ACTIVA'),
             supabase.from('Contadores_Uso').select('id_organizacion', { count: 'exact', head: true }).gt('conteo_registros_nuevos', 100),
-            supabase.from('Contadores_Uso').select('conteo_registros_nuevos'),
-            supabase.from('Configuracion_Plataforma').select('valor').eq('clave', 'precio_por_registro').single()
+            supabase.rpc('get_total_facturado')
           ]);
-
-          const precioPorRegistro = parseFloat(configRes.data?.valor || '0');
-          const totalConsumo = consumoRes.data?.reduce((acc, item) => acc + item.conteo_registros_nuevos, 0) || 0;
 
           setSuperAdminStats({
             organizacionesActivas: orgsActivasRes.count || 0,
             organizacionesConAltoConsumo: orgsAltoConsumoRes.count || 0,
-            ingresosPotencialesCiclo: totalConsumo * precioPorRegistro,
+            montoTotalFacturado: totalFacturadoRes.data || 0,
           });
 
         } else if (userRole && organization) {
@@ -206,7 +202,7 @@ export default function DashboardPage() {
             <DashboardCard title="Organizaciones con alto consumo" value={superAdminStats?.organizacionesConAltoConsumo || 0} link="/dashboard/super-admin" icon={<FiAlertTriangle className="text-red-400 text-2xl" />}>
               <p>Con más de 100 registros sin facturar.</p>
             </DashboardCard>
-            <DashboardCard title="Ingresos potenciales del ciclo" value={`S/ ${(superAdminStats?.ingresosPotencialesCiclo || 0).toFixed(2)}`} link="/dashboard/super-admin" icon={<FiDollarSign className="text-emerald-400 text-2xl" />} />
+            <DashboardCard title="Monto total facturado" value={`S/ ${(superAdminStats?.montoTotalFacturado || 0).toFixed(2)}`} link="/dashboard/super-admin" icon={<FiDollarSign className="text-emerald-400 text-2xl" />} />
           </div>
         </>
       ) : userRole === 'OPERATIVO' ? (

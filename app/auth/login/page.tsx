@@ -9,22 +9,36 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const supabase = createClientComponentClient();
+  const [supabase] = useState(() => createClientComponentClient());
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-      if (error) {
-        throw new Error(error.message);
+      if (authError) throw new Error(authError.message);
+      if (!authData.user) throw new Error('No se pudo autenticar al usuario.');
+
+      // Llamar a la función de base de datos para verificar el estado de la organización
+      const { data: estado, error: rpcError } = await supabase.rpc('verificar_estado_organizacion', { p_user_id: authData.user.id });
+
+      if (rpcError) {
+        throw new Error(`Error al verificar el estado de la organización: ${rpcError.message}`);
       }
-      window.location.href = '/dashboard';
+
+      if (estado === 'SUSPENDIDA') {
+        // Redirigir a la página de suspensión
+        window.location.href = '/auth/suspended';
+      } else {
+        // Para cualquier otro caso (ACTIVA, NO_ASOCIADO, etc.), ir al dashboard
+        window.location.href = '/dashboard';
+      }
+
     } catch (err: any) {
       setError(err.message);
     } finally {

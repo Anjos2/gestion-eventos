@@ -24,17 +24,32 @@ export default function FacturacionPage() {
 
       try {
         setLoading(true);
-        const [registrosActualesRes, configRes] = await Promise.all([
-          supabase.from('Contadores_Uso').select('conteo_registros_nuevos').eq('id_organizacion', organization.id).single(),
-          supabase.from('Configuracion_Plataforma').select('valor').eq('clave', 'precio_por_registro').single()
-        ]);
+        // 1. Obtener el consumo actual
+        const { data: registrosActualesRes, error: registrosError } = await supabase
+          .from('Contadores_Uso')
+          .select('conteo_registros_nuevos')
+          .eq('id_organizacion', organization.id)
+          .single();
 
-        if (registrosActualesRes.error) throw new Error('No se pudo cargar el consumo actual.');
-        if (configRes.error) throw new Error('No se pudo cargar la configuración de precios.');
+        if (registrosError) throw new Error('No se pudo cargar el consumo actual.');
+
+        let finalPrice = organization.precio_por_registro?.toString();
+
+        // 2. Si no hay precio personalizado, obtener el global
+        if (!finalPrice) {
+          const { data: configRes, error: configError } = await supabase
+            .from('Configuracion_Plataforma')
+            .select('valor')
+            .eq('clave', 'precio_por_registro')
+            .single();
+          
+          if (configError) throw new Error('No se pudo cargar la configuración de precios.');
+          finalPrice = configRes?.valor || '0';
+        }
 
         setStats({
-          registrosActuales: registrosActualesRes.data?.conteo_registros_nuevos || 0,
-          precioPorRegistro: configRes.data?.valor || '0',
+          registrosActuales: registrosActualesRes?.conteo_registros_nuevos || 0,
+          precioPorRegistro: finalPrice,
         });
 
       } catch (err: any) {
@@ -97,7 +112,7 @@ export default function FacturacionPage() {
             <p className="mt-2">Escanea el código QR o usa nuestro número para renovar tu servicio de forma rápida y segura.</p>
             <div className="mt-4 text-lg">
               <p>Titular: <span className="font-semibold">Joseph Huayhualla</span></p>
-              <p>Número: <span className="font-semibold">999 636 425</span></p>
+              <p>Número: <span className="font-semibold">999 636 452</span></p>
             </div>
           </div>
           <div className="bg-white p-2 rounded-lg shadow-md">
@@ -106,7 +121,8 @@ export default function FacturacionPage() {
               alt="Código QR de Yape" 
               width={150} 
               height={150} 
-              className="rounded-md"
+              className="rounded-md" 
+              style={{ width: 'auto', height: 'auto' }}
             />
           </div>
         </div>
