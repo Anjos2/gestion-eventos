@@ -15,6 +15,12 @@ interface Organization {
   precio_por_registro: number | null;
 }
 
+interface BillingInfo {
+  conteo_registros_nuevos: number;
+  ultimo_reseteo: string | null;
+  costo_actual: number;
+}
+
 type UserRole = 'ADMINISTRATIVO' | 'OPERATIVO' | 'ADMINISTRATIVO_APOYO';
 
 interface OrganizationContextType {
@@ -24,6 +30,7 @@ interface OrganizationContextType {
   isSuperAdmin: boolean
   isLoading: boolean
   supabase: any
+  billingInfo: BillingInfo | null;
 }
 
 // --- CONTEXTO ---
@@ -37,11 +44,13 @@ export const OrganizationProvider = ({ children }: { children: ReactNode }) => {
   const [userRole, setUserRole] = useState<UserRole | null>(null);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true)
+  const [billingInfo, setBillingInfo] = useState<BillingInfo | null>(null);
 
   const resetState = () => {
     setOrganization(null);
     setUserRole(null);
     setIsSuperAdmin(false);
+    setBillingInfo(null);
   };
 
   useEffect(() => {
@@ -63,6 +72,7 @@ export const OrganizationProvider = ({ children }: { children: ReactNode }) => {
         if (isUserSuperAdmin) {
           setOrganization(null);
           setUserRole(null);
+          setBillingInfo(null);
           return;
         }
 
@@ -94,6 +104,24 @@ export const OrganizationProvider = ({ children }: { children: ReactNode }) => {
 
         setOrganization(orgData);
 
+        // Fetch billing info
+        const { data: usageData, error: usageError } = await supabase
+          .from('Contadores_Uso')
+          .select('conteo_registros_nuevos, ultimo_reseteo')
+          .eq('id_organizacion', orgData.id)
+          .single();
+
+        if (usageError) {
+          console.error('Error fetching usage data:', usageError);
+          setBillingInfo(null);
+        } else if (usageData) {
+          const costo_actual = (usageData.conteo_registros_nuevos || 0) * (orgData.precio_por_registro || 0);
+          setBillingInfo({
+            ...usageData,
+            costo_actual
+          });
+        }
+
       } catch (error) {
         console.error("Error loading organization context:", error);
         resetState();
@@ -116,7 +144,7 @@ export const OrganizationProvider = ({ children }: { children: ReactNode }) => {
   }, [supabase]);
 
   return (
-    <OrganizationContext.Provider value={{ organization, session, userRole, isSuperAdmin, isLoading, supabase }}>
+    <OrganizationContext.Provider value={{ organization, session, userRole, isSuperAdmin, isLoading, supabase, billingInfo }}>
       {children}
     </OrganizationContext.Provider>
   )
