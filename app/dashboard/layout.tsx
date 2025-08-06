@@ -6,6 +6,7 @@ import Sidebar from '../components/ui/sidebar';
 import Header from '../components/ui/header';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import { Toaster, toast } from 'react-hot-toast';
 
 function DashboardContent({ children }: { children: React.ReactNode }) {
   const { session, organization, billingInfo, isLoading, supabase } = useOrganization();
@@ -47,6 +48,15 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex bg-slate-900 text-slate-100 min-h-screen">
+      <Toaster 
+        position="top-right"
+        toastOptions={{
+          style: {
+            background: '#334155',
+            color: '#fff',
+          },
+        }}
+      />
       <Sidebar isOpen={isSidebarOpen} toggleSidebar={() => setSidebarOpen(!isSidebarOpen)} />
       <div className="flex-1 flex flex-col h-screen w-0">
         <Header toggleSidebar={() => setSidebarOpen(!isSidebarOpen)} />
@@ -69,7 +79,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
               <div className="bg-slate-900/50 p-6 rounded-lg flex flex-col md:flex-row items-center justify-between gap-6">
                 <div className="text-center md:text-left">
                   <p className="text-slate-400 text-sm">Monto a Pagar</p>
-                  <p className="text-sky-400 font-bold text-4xl mb-4">S/ {billingInfo.amount.toFixed(2)}</p>
+                  <p className="text-sky-400 font-bold text-4xl mb-4">S/ {billingInfo.costo_actual.toFixed(2)}</p>
                   <p className="text-lg">Titular: <span className="font-semibold">Joseph Huayhualla</span></p>
                   <p className="text-lg">Número: <span className="font-semibold">999 636 452</span></p>
                   <p className="text-xs text-slate-500 mt-2">Una vez realizado el pago, envía el comprobante al soporte para la reactivación.</p>
