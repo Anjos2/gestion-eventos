@@ -65,8 +65,8 @@ export const OrganizationProvider = ({ children }: { children: ReactNode }) => {
           return;
         }
 
-        const SUPER_ADMIN_USER_ID = process.env.NEXT_PUBLIC_SUPER_ADMIN_ID;
-        const isUserSuperAdmin = currentSession.user.id === SUPER_ADMIN_USER_ID;
+        const SUPER_ADMIN_USER_ID = process.env.NEXT_PUBLIC_SUPER_ADMIN_ID ?? '';
+        const isUserSuperAdmin = SUPER_ADMIN_USER_ID !== '' && currentSession.user.id === SUPER_ADMIN_USER_ID;
         setIsSuperAdmin(isUserSuperAdmin);
 
         if (isUserSuperAdmin) {
