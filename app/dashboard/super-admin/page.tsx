@@ -47,7 +47,7 @@ export default function SuperAdminPage() {
         nombre,
         estado,
         precio_por_registro,
-        Contadores_Uso!inner ( conteo_registros_nuevos )
+        Contadores_Uso ( conteo_registros_nuevos )
       `);
 
     if (error) {
@@ -55,10 +55,13 @@ export default function SuperAdminPage() {
       setError('No se pudieron cargar las organizaciones.');
     } else {
       const getSingle = (data: any) => (Array.isArray(data) ? data[0] : data);
-      const aplanado = data.map(org => ({
-        ...org,
-        conteo_registros_nuevos: getSingle(org.Contadores_Uso)?.conteo_registros_nuevos ?? 0,
-      }));
+      const aplanado = data.map(org => {
+        const contador = getSingle(org.Contadores_Uso);
+        return {
+          ...org,
+          conteo_registros_nuevos: contador?.conteo_registros_nuevos ?? 0,
+        };
+      });
       setOrganizaciones(aplanado as Organizacion[]);
     }
     setLoading(false);
