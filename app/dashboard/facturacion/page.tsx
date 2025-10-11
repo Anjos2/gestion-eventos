@@ -33,18 +33,18 @@ export default function FacturacionPage() {
 
         if (registrosError) throw new Error('No se pudo cargar el consumo actual.');
 
-        let finalPrice = organization.precio_por_registro?.toString();
+        let finalPrice = organization.precio_por_registro?.toString() ?? '0';
 
         // 2. Si no hay precio personalizado, obtener el global
-        if (!finalPrice) {
+        if (finalPrice === '0') {
           const { data: configRes, error: configError } = await supabase
             .from('Configuracion_Plataforma')
             .select('valor')
             .eq('clave', 'precio_por_registro')
             .single();
-          
+
           if (configError) throw new Error('No se pudo cargar la configuración de precios.');
-          finalPrice = configRes?.valor || '0';
+          finalPrice = configRes?.valor ?? '0';
         }
 
         setStats({
