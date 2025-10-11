@@ -185,7 +185,7 @@ function PersonalPageContent() {
       toast.error('Error: No se pudo determinar la organización.');
       return;
     }
-    const inviteLink = `${window.location.origin}/auth/register-personal?org_id=${orgId}`;
+    const inviteLink = `${process.env.NEXT_PUBLIC_SITE_URL || window.location.origin}/auth/register-personal?org_id=${orgId}`;
     toast(() => (
       <div className="text-white">
         <p className="font-bold mb-2">Copia este enlace para invitar:</p>

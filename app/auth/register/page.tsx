@@ -9,6 +9,7 @@ export default function RegisterPage() {
   const [orgName, setOrgName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -19,6 +20,21 @@ export default function RegisterPage() {
     setLoading(true);
     setError(null);
     setSuccess(null);
+    
+    // Validar que las contraseñas coincidan
+    if (password !== confirmPassword) {
+      setError('Las contraseñas no coinciden');
+      setLoading(false);
+      return;
+    }
+    
+    // Validar que la contraseña tenga al menos 6 caracteres
+    if (password.length < 6) {
+      setError('La contraseña debe tener al menos 6 caracteres');
+      setLoading(false);
+      return;
+    }
+    
     try {
       const { data, error } = await supabase.functions.invoke('sign-up', {
         body: { fullName, orgName, email, password },
@@ -101,6 +117,22 @@ export default function RegisterPage() {
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              minLength={6}
+              required
+            />
+            <p className="text-xs text-slate-400 mt-1">Mínimo 6 caracteres</p>
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-slate-300 mb-2" htmlFor="confirmPassword">
+              Confirmar contraseña
+            </label>
+            <input
+              className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500 transition"
+              id="confirmPassword"
+              type="password"
+              placeholder="••••••••"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
               required
             />
           </div>

@@ -2,23 +2,33 @@
 
 import { useState, useEffect } from 'react';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { FiLock, FiEye, FiEyeOff } from 'react-icons/fi';
 
 export default function SetPasswordPage() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>('Verificando invitación...');
+  const [message, setMessage] = useState<string | null>('Verificando...');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [isPasswordReset, setIsPasswordReset] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
   const supabase = createClientComponentClient();
 
   useEffect(() => {
+    // Verificar si es un reset de contraseña basado en los parámetros de la URL
+    const type = searchParams.get('type');
+    setIsPasswordReset(type === 'recovery');
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN') {
-        setMessage('¡Invitación verificada! Por favor, establece tu contraseña.');
+        if (type === 'recovery') {
+          setMessage('¡Enlace de recuperación verificado! Por favor, establece tu nueva contraseña.');
+        } else {
+          setMessage('¡Invitación verificada! Por favor, establece tu contraseña.');
+        }
         setError(null);
       }
     });
@@ -27,7 +37,7 @@ export default function SetPasswordPage() {
     return () => {
       subscription.unsubscribe();
     };
-  }, [supabase.auth]);
+  }, [supabase.auth, searchParams]);
 
   const handleSetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,27 +62,33 @@ export default function SetPasswordPage() {
         throw updateError;
       }
 
-      // Ahora, necesitamos vincular este usuario de Supabase con el registro de Personal
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user && user.email) {
-        const { error: linkError } = await supabase
-          .from('Personal')
-          .update({ supabase_user_id: user.id })
-          .eq('email', user.email);
-
-        if (linkError) {
-          // Esto es un problema, pero el usuario ya tiene contraseña.
-          // Lo ideal sería loggear este error para revisión manual.
-          console.error('Error al vincular el usuario con el personal:', linkError);
-          setError('Tu contraseña ha sido creada, pero hubo un problema al configurar tu cuenta. Por favor, contacta a soporte.');
-        } else {
-          setMessage('¡Contraseña establecida con éxito! Redirigiendo al dashboard...');
-          setTimeout(() => {
-            router.push('/dashboard');
-          }, 2000);
-        }
+      if (isPasswordReset) {
+        // Para reset de contraseña, simplemente redirigir al dashboard
+        setMessage('¡Contraseña actualizada con éxito! Redirigiendo al dashboard...');
+        setTimeout(() => {
+          router.push('/dashboard');
+        }, 2000);
       } else {
-        throw new Error('No se pudo obtener la información del usuario para finalizar la configuración.')
+        // Para invitación de personal, vincular el usuario con el registro de Personal
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user && user.email) {
+          const { error: linkError } = await supabase
+            .from('Personal')
+            .update({ supabase_user_id: user.id })
+            .eq('email', user.email);
+
+          if (linkError) {
+            console.error('Error al vincular el usuario con el personal:', linkError);
+            setError('Tu contraseña ha sido creada, pero hubo un problema al configurar tu cuenta. Por favor, contacta a soporte.');
+          } else {
+            setMessage('¡Contraseña establecida con éxito! Redirigiendo al dashboard...');
+            setTimeout(() => {
+              router.push('/dashboard');
+            }, 2000);
+          }
+        } else {
+          throw new Error('No se pudo obtener la información del usuario para finalizar la configuración.');
+        }
       }
 
     } catch (err: any) {
@@ -85,8 +101,15 @@ export default function SetPasswordPage() {
   return (
     <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
       <div className="w-full max-w-md mx-auto bg-slate-800 rounded-2xl shadow-xl p-8 border border-slate-700">
-        <h1 className="text-4xl font-bold text-white text-center mb-2">Crea tu Contraseña</h1>
-        <p className="text-slate-400 text-center mb-8">Bienvenido/a. Tu usuario será tu correo electrónico.</p>
+        <h1 className="text-4xl font-bold text-white text-center mb-2">
+          {isPasswordReset ? 'Actualizar Contraseña' : 'Crea tu Contraseña'}
+        </h1>
+        <p className="text-slate-400 text-center mb-8">
+          {isPasswordReset 
+            ? 'Ingresa tu nueva contraseña para recuperar el acceso a tu cuenta.'
+            : 'Bienvenido/a. Tu usuario será tu correo electrónico.'
+          }
+        </p>
 
         {error && (
           <div className="bg-red-900 border border-red-700 text-red-200 px-4 py-3 rounded-lg mb-6" role="alert">
@@ -131,7 +154,7 @@ export default function SetPasswordPage() {
               disabled={loading}
               className="w-full bg-sky-600 hover:bg-sky-700 text-white font-bold py-3 px-4 rounded-lg shadow-md transition-colors duration-200 transform hover:scale-105 disabled:bg-slate-600 disabled:cursor-not-allowed"
             >
-              {loading ? 'Guardando...' : 'Guardar Contraseña y Acceder'}
+              {loading ? 'Guardando...' : (isPasswordReset ? 'Actualizar Contraseña' : 'Guardar Contraseña y Acceder')}
             </button>
           </div>
         </form>
