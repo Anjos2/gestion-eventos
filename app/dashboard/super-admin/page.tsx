@@ -40,30 +40,43 @@ export default function SuperAdminPage() {
 
   const fetchOrganizaciones = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from('Organizaciones')
-      .select(`
-        id,
-        nombre,
-        estado,
-        precio_por_registro,
-        Contadores_Uso ( conteo_registros_nuevos )
-      `);
 
-    if (error) {
-      console.error('Error fetching organizaciones:', error);
+    // Query 1: Obtener todas las organizaciones
+    const { data: orgsData, error: orgsError } = await supabase
+      .from('Organizaciones')
+      .select('id, nombre, estado, precio_por_registro');
+
+    if (orgsError) {
+      console.error('Error fetching organizaciones:', orgsError);
       setError('No se pudieron cargar las organizaciones.');
-    } else {
-      const getSingle = (data: any) => (Array.isArray(data) ? data[0] : data);
-      const aplanado = data.map(org => {
-        const contador = getSingle(org.Contadores_Uso);
-        return {
-          ...org,
-          conteo_registros_nuevos: contador?.conteo_registros_nuevos ?? 0,
-        };
-      });
-      setOrganizaciones(aplanado as Organizacion[]);
+      setLoading(false);
+      return;
     }
+
+    // Query 2: Obtener todos los contadores
+    const { data: contadoresData, error: contadoresError } = await supabase
+      .from('Contadores_Uso')
+      .select('id_organizacion, conteo_registros_nuevos');
+
+    if (contadoresError) {
+      console.error('Error fetching contadores:', contadoresError);
+      setError('No se pudieron cargar los contadores de uso.');
+      setLoading(false);
+      return;
+    }
+
+    // Crear un mapa de contadores por id_organizacion para búsqueda rápida
+    const contadoresMap = new Map(
+      contadoresData.map(c => [c.id_organizacion, c.conteo_registros_nuevos])
+    );
+
+    // Combinar los datos
+    const organizacionesConContador = orgsData.map(org => ({
+      ...org,
+      conteo_registros_nuevos: contadoresMap.get(org.id) ?? 0,
+    }));
+
+    setOrganizaciones(organizacionesConContador as Organizacion[]);
     setLoading(false);
   };
 
