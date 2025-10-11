@@ -242,7 +242,7 @@ export default function RentabilidadContratoReportePage() {
         return acc;
       }, [] as number[]);
 
-      ws['!cols'] = colWidths.map(w => ({ wch: w + 2 })); // Añadir padding
+      ws['!cols'] = colWidths.map((w: number) => ({ wch: w + 2 })); // Añadir padding
 
       // 4. Añadir la hoja al libro
       const sheetName = data.tipoContratoNombre.replace(/[^a-zA-Z0-9]/g, '').substring(0, 31);

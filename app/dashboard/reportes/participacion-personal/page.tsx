@@ -203,7 +203,7 @@ export default function ParticipacionPersonalReportePage() {
       return acc;
     }, [] as number[]);
 
-    ws['!cols'] = colWidths.map(w => ({ wch: w + 2 })); // Añadir padding
+    ws['!cols'] = colWidths.map((w: number) => ({ wch: w + 2 })); // Añadir padding
 
     // 4. Crear y descargar el libro
     const wb = XLSX.utils.book_new();
