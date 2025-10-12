@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { useOrganization } from '@/app/context/OrganizationContext';
-import { FiAlertTriangle, FiCheck, FiThumbsDown, FiThumbsUp } from 'react-icons/fi';
+import { FiAlertTriangle, FiCheck } from 'react-icons/fi';
 
 // Tipos de datos
 interface LotePago {
@@ -27,7 +27,6 @@ export default function PorAprobarPage() {
   const [lotes, setLotes] = useState<LotePago[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [processing, setProcessing] = useState<number | null>(null);
   const supabase = createClientComponentClient();
 
   const fetchMisPagos = async () => {
@@ -65,7 +64,8 @@ export default function PorAprobarPage() {
           )
         `)
         .eq('id_personal', personalData.id)
-        .in('estado', ['PENDIENTE_APROBACION', 'RECLAMADO']);
+        .in('estado', ['PAGADO', 'RECLAMADO'])
+        .order('fecha_pago', { ascending: false });
 
       if (lotesError) throw new Error(lotesError.message);
 
@@ -96,48 +96,6 @@ export default function PorAprobarPage() {
     fetchMisPagos();
   }, [session, supabase]);
 
-  const handleUpdateLoteStatus = async (loteId: number, newStatus: 'PAGADO' | 'RECLAMADO') => {
-    const confirmationText = newStatus === 'PAGADO' 
-      ? '¿Confirmas que has recibido el monto y estás de acuerdo con este pago?'
-      : '¿Estás seguro de que quieres presentar un reclamo sobre este lote de pago?';
-
-    if (!window.confirm(confirmationText)) return;
-
-    setProcessing(loteId);
-    try {
-      const { error } = await supabase
-        .from('Lotes_Pago')
-        .update({ estado: newStatus })
-        .eq('id', loteId);
-
-      if (error) throw error;
-
-      // Si el lote se marca como PAGADO, actualizamos los servicios a PAGADO.
-      if (newStatus === 'PAGADO') {
-        const { data: detalles } = await supabase
-          .from('Detalles_Lote_Pago')
-          .select('id_evento_servicio_asignado')
-          .eq('id_lote_pago', loteId);
-        
-        if (detalles) {
-          const serviceIds = detalles.map(d => d.id_evento_servicio_asignado);
-          await supabase
-            .from('Evento_Servicios_Asignados')
-            .update({ estado_pago: 'PAGADO' })
-            .in('id', serviceIds);
-        }
-      }
-
-      alert(`Lote ${newStatus === 'PAGADO' ? 'aceptado' : 'reclamado'} con éxito.`);
-      fetchMisPagos(); // Refresh the list
-
-    } catch (err: any) {
-      alert(`Error al actualizar el lote: ${err.message}`);
-    } finally {
-      setProcessing(null);
-    }
-  };
-
   if (loading) return <div className="text-center p-8"><p className="text-slate-400">Cargando tus pagos...</p></div>;
   if (error) return <div className="bg-red-900 text-red-200 p-4 rounded-lg">Error: {error}</div>;
 
@@ -145,11 +103,16 @@ export default function PorAprobarPage() {
     <div className="space-y-6">
       {lotes.length > 0 ? (
         lotes.map(lote => (
-          <div key={lote.id} className={`bg-slate-800 rounded-xl shadow-lg p-6 border-l-4 ${lote.estado === 'RECLAMADO' ? 'border-red-500' : 'border-yellow-500'}`}>
+          <div key={lote.id} className={`bg-slate-800 rounded-xl shadow-lg p-6 border-l-4 ${lote.estado === 'RECLAMADO' ? 'border-red-500' : 'border-green-500'}`}>
             <div className="flex flex-col md:flex-row justify-between items-start mb-4">
               <div>
                 <h2 className="text-2xl font-bold text-white">Lote de pago #{lote.id}</h2>
                 <p className="text-sm text-slate-400">Generado el: {lote.fecha_pago}</p>
+                <span className={`inline-block mt-2 px-3 py-1 text-xs font-semibold rounded-full ${
+                  lote.estado === 'PAGADO' ? 'bg-green-900 text-green-200' : 'bg-red-900 text-red-200'
+                }`}>
+                  {lote.estado}
+                </span>
               </div>
               <div className="text-right mt-4 md:mt-0">
                 <p className="text-slate-400">Monto total</p>
@@ -175,27 +138,6 @@ export default function PorAprobarPage() {
               </ul>
             </div>
 
-            {lote.estado === 'PENDIENTE_APROBACION' && (
-              <div className="flex justify-end gap-4 mt-6">
-                <button 
-                  onClick={() => handleUpdateLoteStatus(lote.id, 'RECLAMADO')}
-                  disabled={processing === lote.id}
-                  className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition-colors disabled:bg-slate-600"
-                >
-                  <FiThumbsDown />
-                  {processing === lote.id ? 'Procesando...' : 'Reclamar'}
-                </button>
-                <button 
-                  onClick={() => handleUpdateLoteStatus(lote.id, 'PAGADO')}
-                  disabled={processing === lote.id}
-                  className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-colors disabled:bg-slate-600"
-                >
-                  <FiThumbsUp />
-                  {processing === lote.id ? 'Procesando...' : 'Aceptar y confirmar pago'}
-                </button>
-              </div>
-            )}
-
             {lote.estado === 'RECLAMADO' && (
                <div className="mt-4 p-4 bg-red-900/50 border border-red-700 rounded-lg flex items-center gap-3">
                   <FiAlertTriangle className="text-red-400 text-2xl" />
@@ -207,8 +149,8 @@ export default function PorAprobarPage() {
       ) : (
         <div className="text-center py-16 bg-slate-800 rounded-xl border border-slate-700">
           <FiCheck className="mx-auto text-6xl text-green-500 mb-4" />
-          <h2 className="text-2xl font-bold text-white">Todo en orden</h2>
-          <p className="text-slate-400 mt-2">No tienes lotes de pago pendientes de aprobación.</p>
+          <h2 className="text-2xl font-bold text-white">Sin lotes de pago</h2>
+          <p className="text-slate-400 mt-2">No tienes lotes de pago registrados aún.</p>
         </div>
       )}
     </div>

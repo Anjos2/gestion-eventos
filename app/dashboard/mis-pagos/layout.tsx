@@ -9,7 +9,7 @@ export default function MisPagosLayout({ children }: { children: React.ReactNode
 
   const navLinks = [
     { href: '/dashboard/mis-pagos/pendientes', label: 'Servicios por pagar', icon: <FiList /> },
-    { href: '/dashboard/mis-pagos/por-aprobar', label: 'Lotes por aprobar', icon: <FiCheckSquare /> },
+    { href: '/dashboard/mis-pagos/por-aprobar', label: 'Lotes enviados', icon: <FiCheckSquare /> },
     { href: '/dashboard/mis-pagos/historial', label: 'Historial de lotes', icon: <FiArchive /> },
   ];
 

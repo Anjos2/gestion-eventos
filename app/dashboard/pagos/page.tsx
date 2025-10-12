@@ -214,7 +214,7 @@ export default function PagosPage() {
           id_personal_administrativo,
           monto_total,
           fecha_pago: new Date().toISOString().slice(0, 10),
-          estado: 'PENDIENTE_APROBACION',
+          estado: 'PAGADO',
           created_by: id_personal_administrativo,
         })
         .select('id')
@@ -237,12 +237,12 @@ export default function PagosPage() {
 
       const { error: updateError } = await supabase
         .from('Evento_Servicios_Asignados')
-        .update({ estado_pago: 'EN_LOTE' })
+        .update({ estado_pago: 'PAGADO' })
         .in('id', servicesToPay.map(s => s.id_servicio_asignado));
 
       if (updateError) throw new Error(`Error al actualizar el estado de los servicios: ${updateError.message}`);
 
-      toast.success(`¡Lote de pago enviado a aprobación para ${personal.nombre_personal}!`, { id: toastId });
+      toast.success(`¡Lote de pago creado y marcado como pagado para ${personal.nombre_personal}!`, { id: toastId });
       fetchPagosPendientes(); // Re-fetch data to update the list
       setSelectedServices(prev => {
         const newSelections = { ...prev };
