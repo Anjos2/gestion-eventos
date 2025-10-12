@@ -162,9 +162,13 @@ function PersonalPageContent() {
     if (!organization) return;
     const toastId = toast.loading('Añadiendo personal...');
     try {
-      const { data, error } = await supabase.from('Personal').insert({
-        nombre: name, email: email, rol: rol, id_organizacion: organization.id, es_activo: true,
-      }).select().single();
+      // Usar función RPC en lugar de INSERT directo para evitar problemas de RLS
+      const { data, error } = await supabase.rpc('add_personal_member', {
+        p_nombre: name,
+        p_email: email,
+        p_rol: rol,
+        p_id_organizacion: organization.id
+      });
 
       if (error) throw error;
       if (!data) throw new Error('No se recibió respuesta al crear el personal.');
