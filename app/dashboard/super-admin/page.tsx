@@ -40,30 +40,48 @@ export default function SuperAdminPage() {
 
   const fetchOrganizaciones = async () => {
     setLoading(true);
+    setError(null);
+    console.log('[SuperAdmin] 🔄 Iniciando carga de organizaciones...');
 
     // Query 1: Obtener todas las organizaciones
+    console.log('[SuperAdmin] 📊 Consultando tabla Organizaciones...');
     const { data: orgsData, error: orgsError } = await supabase
       .from('Organizaciones')
       .select('id, nombre, estado, precio_por_registro');
 
     if (orgsError) {
-      console.error('Error fetching organizaciones:', orgsError);
+      console.error('[SuperAdmin] ❌ ERROR en query Organizaciones:', {
+        code: orgsError.code,
+        message: orgsError.message,
+        details: orgsError.details,
+        hint: orgsError.hint
+      });
       setError('No se pudieron cargar las organizaciones.');
       setLoading(false);
       return;
     }
 
+    console.log('[SuperAdmin] ✅ Organizaciones obtenidas:', orgsData?.length || 0, 'registros');
+
     // Query 2: Obtener todos los contadores
+    console.log('[SuperAdmin] 📊 Consultando tabla Contadores_Uso...');
     const { data: contadoresData, error: contadoresError } = await supabase
       .from('Contadores_Uso')
       .select('id_organizacion, conteo_registros_nuevos');
 
     if (contadoresError) {
-      console.error('Error fetching contadores:', contadoresError);
+      console.error('[SuperAdmin] ❌ ERROR en query Contadores_Uso:', {
+        code: contadoresError.code,
+        message: contadoresError.message,
+        details: contadoresError.details,
+        hint: contadoresError.hint
+      });
       setError('No se pudieron cargar los contadores de uso.');
       setLoading(false);
       return;
     }
+
+    console.log('[SuperAdmin] ✅ Contadores obtenidos:', contadoresData?.length || 0, 'registros');
 
     // Crear un mapa de contadores por id_organizacion para búsqueda rápida
     const contadoresMap = new Map(
@@ -76,6 +94,7 @@ export default function SuperAdminPage() {
       conteo_registros_nuevos: contadoresMap.get(org.id) ?? 0,
     }));
 
+    console.log('[SuperAdmin] ✅ Datos combinados exitosamente:', organizacionesConContador.length, 'organizaciones');
     setOrganizaciones(organizacionesConContador as Organizacion[]);
     setLoading(false);
   };
@@ -83,7 +102,8 @@ export default function SuperAdminPage() {
   useEffect(() => {
     fetchOrganizaciones();
     fetchConfig();
-  }, [supabase]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleGuardarPrecio = async () => {
     const toastId = toast.loading('Actualizando precio...');
