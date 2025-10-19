@@ -42,13 +42,13 @@ export default function HistorialPagosPage() {
 
       if (personalError || !personalData) throw new Error('No se pudo encontrar tu registro de personal.');
 
-      // Use flattened view instead of nested joins
+      // Use flattened view for finalized payment batches only
       const { data: detallesData, error: detallesError } = await supabase
         .from('vista_lotes_pago_personal_detalle')
         .select('*')
         .eq('id_personal', personalData.id)
-        .in('estado', ['PAGADO', 'FINALIZADO'])
-        .order('fecha_pago', { ascending: false });
+        .eq('estado', 'FINALIZADO')
+        .order('fecha_pago', { ascending: false});
 
       if (detallesError) throw new Error(detallesError.message);
 

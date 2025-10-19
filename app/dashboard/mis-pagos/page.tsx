@@ -7,7 +7,7 @@ export default function MisPagosRedirect() {
   const router = useRouter();
 
   useEffect(() => {
-    router.replace('/dashboard/mis-pagos/por-aprobar');
+    router.replace('/dashboard/mis-pagos/pendientes');
   }, [router]);
 
   return (

@@ -2,15 +2,14 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { FiList, FiCheckSquare, FiArchive } from 'react-icons/fi';
+import { FiList, FiArchive } from 'react-icons/fi';
 
 export default function MisPagosLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
   const navLinks = [
-    { href: '/dashboard/mis-pagos/pendientes', label: 'Servicios por pagar', icon: <FiList /> },
-    { href: '/dashboard/mis-pagos/por-aprobar', label: 'Lotes enviados', icon: <FiCheckSquare /> },
-    { href: '/dashboard/mis-pagos/historial', label: 'Historial de lotes', icon: <FiArchive /> },
+    { href: '/dashboard/mis-pagos/pendientes', label: 'Servicios pendientes', icon: <FiList /> },
+    { href: '/dashboard/mis-pagos/historial', label: 'Historial de pagos', icon: <FiArchive /> },
   ];
 
   return (
