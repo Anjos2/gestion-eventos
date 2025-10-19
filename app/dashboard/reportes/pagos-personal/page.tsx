@@ -111,7 +111,7 @@ export default function PagosPersonalReportePage() {
         )
       `)
       .eq('id_personal', selectedPersonal)
-      .eq('estado', 'PAGADO') // <-- AÑADIDO: Filtra solo lotes pagados
+      .in('estado', ['PAGADO', 'FINALIZADO']) // Show both paid and finalized batches
       .gte('fecha_pago', startDate)
       .lte('fecha_pago', endDate)
       .order('fecha_pago', { ascending: false });

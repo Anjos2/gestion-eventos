@@ -78,101 +78,239 @@ export default function RentabilidadContratoReportePage() {
     setError(null);
     setReportData([]);
 
-    const getSingle = (data: any) => (Array.isArray(data) ? data[0] : data);
+    try {
+      const getSingle = (data: any) => (Array.isArray(data) ? data[0] : data);
 
-    // 1. Obtener los contratos que cumplen con los filtros
-    const { data: contratos, error: contratosError } = await supabase
-      .from('Contratos')
-      .select('id, id_tipo_contrato, fecha_hora_evento, Tipos_Contrato(nombre, ingreso_base), Contratadores(nombre)')
-      .in('id_tipo_contrato', selectedTipos)
-      .gte('fecha_hora_evento', startDate)
-      .lte('fecha_hora_evento', endDate);
+      // QUERY 1: Get contracts that match filters (date is in Contratos table)
+      const { data: contratos, error: contratosError } = await supabase
+        .from('Contratos')
+        .select('id, id_tipo_contrato, fecha_hora_evento')
+        .in('id_tipo_contrato', selectedTipos)
+        .gte('fecha_hora_evento', startDate)
+        .lte('fecha_hora_evento', endDate);
 
-    if (contratosError) {
-      setError(contratosError.message);
-      setLoading(false);
-      return;
-    }
-
-    const idContratos = contratos.map(c => c.id);
-
-    // 2. Obtener los costos de los servicios pagados para esos contratos
-    const { data: costos, error: costosError } = await supabase
-      .from('Detalles_Lote_Pago')
-      .select('monto_pagado, Evento_Servicios_Asignados!inner(Servicios!inner(nombre), Participaciones_Personal!inner(Personal!inner(nombre), Eventos_Contrato!inner(id_contrato)))')
-      .in('Evento_Servicios_Asignados.Participaciones_Personal.Eventos_Contrato.id_contrato', idContratos);
-
-    if (costosError) {
-        setError(costosError.message);
+      if (contratosError) throw contratosError;
+      if (!contratos || contratos.length === 0) {
+        setReportData([]);
         setLoading(false);
         return;
-    }
+      }
 
-    // 3. Procesar y agregar los datos
-    const dataMap: { [key: string]: ReportData } = {};
+      const contratoIds = contratos.map(c => c.id);
+      const tipoContratoIds = Array.from(new Set(contratos.map(c => c.id_tipo_contrato)));
 
-    contratos.forEach(contrato => {
-        const tipoContrato = getSingle(contrato.Tipos_Contrato);
-        const contratador = getSingle(contrato.Contratadores);
-        if (!tipoContrato || !contratador) return;
+      // QUERY 2: Get Tipos_Contrato info
+      const { data: tiposContratoData, error: tiposError } = await supabase
+        .from('Tipos_Contrato')
+        .select('id, nombre, ingreso_base')
+        .in('id', tipoContratoIds);
 
-        const nombre = tipoContrato.nombre;
-        if (!dataMap[nombre]) {
-            dataMap[nombre] = {
-                tipoContratoNombre: nombre,
-                ingresoTotal: 0,
-                costoTotal: 0,
-                ingresoNeto: 0,
-                cantidadContratos: 0,
-                detallesIngreso: [],
-                detallesCosto: [],
-            };
+      if (tiposError) throw tiposError;
+
+      // QUERY 3: Get Contratadores info
+      const { data: contratadoresData, error: contratadoresError } = await supabase
+        .from('Contratadores')
+        .select('id')
+        .in('id', contratoIds);
+
+      if (contratadoresError) throw contratadoresError;
+
+      // Get contratador names (since Contratadores uses id_contrato as FK)
+      const { data: contratadoresNombres, error: contratadoresNombresError } = await supabase
+        .from('Contratos')
+        .select('id, Contratadores(nombre)')
+        .in('id', contratoIds);
+
+      if (contratadoresNombresError) throw contratadoresNombresError;
+
+      // QUERY 4: Get Eventos_Contrato (intermediate table)
+      const { data: eventosContrato, error: eventosError } = await supabase
+        .from('Eventos_Contrato')
+        .select('id, id_contrato')
+        .in('id_contrato', contratoIds);
+
+      if (eventosError) throw eventosError;
+      if (!eventosContrato || eventosContrato.length === 0) {
+        // No events, so no costs - just show income
+        const dataMap = buildIngresoData(contratos, tiposContratoData, contratadoresNombres, getSingle);
+        setReportData(Object.values(dataMap));
+        setLoading(false);
+        return;
+      }
+
+      const eventoContratoIds = eventosContrato.map(ec => ec.id);
+
+      // QUERY 5: Get Participaciones_Personal
+      const { data: participaciones, error: participacionesError } = await supabase
+        .from('Participaciones_Personal')
+        .select('id, id_evento_contrato, id_personal_participante')
+        .in('id_evento_contrato', eventoContratoIds);
+
+      if (participacionesError) throw participacionesError;
+      if (!participaciones || participaciones.length === 0) {
+        const dataMap = buildIngresoData(contratos, tiposContratoData, contratadoresNombres, getSingle);
+        setReportData(Object.values(dataMap));
+        setLoading(false);
+        return;
+      }
+
+      const participacionIds = participaciones.map(p => p.id);
+      const personalIds = Array.from(new Set(participaciones.map(p => p.id_personal_participante)));
+
+      // QUERY 6: Get Evento_Servicios_Asignados
+      const { data: serviciosAsignados, error: serviciosError } = await supabase
+        .from('Evento_Servicios_Asignados')
+        .select('id, id_participacion, id_servicio, estado_pago')
+        .in('id_participacion', participacionIds);
+
+      if (serviciosError) throw serviciosError;
+      if (!serviciosAsignados || serviciosAsignados.length === 0) {
+        const dataMap = buildIngresoData(contratos, tiposContratoData, contratadoresNombres, getSingle);
+        setReportData(Object.values(dataMap));
+        setLoading(false);
+        return;
+      }
+
+      const servicioAsignadoIds = serviciosAsignados.map(sa => sa.id);
+      const servicioIds = Array.from(new Set(serviciosAsignados.map(sa => sa.id_servicio)));
+
+      // QUERY 7: Get Detalles_Lote_Pago (only for PAID services)
+      const { data: detallesLote, error: detallesError } = await supabase
+        .from('Detalles_Lote_Pago')
+        .select('id, id_evento_servicio, monto_pagado')
+        .in('id_evento_servicio', servicioAsignadoIds);
+
+      if (detallesError) throw detallesError;
+
+      // QUERY 8: Get Servicios info
+      const { data: serviciosInfo, error: serviciosInfoError } = await supabase
+        .from('Servicios')
+        .select('id, nombre')
+        .in('id', servicioIds);
+
+      if (serviciosInfoError) throw serviciosInfoError;
+
+      // QUERY 9: Get Personal info
+      const { data: personalInfo, error: personalError } = await supabase
+        .from('Personal')
+        .select('id, nombre')
+        .in('id', personalIds);
+
+      if (personalError) throw personalError;
+
+      // Create Maps for O(1) lookups
+      const tipoContratoMap = new Map(tiposContratoData?.map(tc => [tc.id, tc]));
+      const contratoMap = new Map(contratos.map(c => [c.id, c]));
+      const eventoContratoMap = new Map(eventosContrato.map(ec => [ec.id, ec]));
+      const participacionMap = new Map(participaciones.map(p => [p.id, p]));
+      const servicioAsignadoMap = new Map(serviciosAsignados.map(sa => [sa.id, sa]));
+      const servicioInfoMap = new Map(serviciosInfo?.map(s => [s.id, s]));
+      const personalInfoMap = new Map(personalInfo?.map(p => [p.id, p]));
+      const contratadorMap = new Map(
+        contratadoresNombres?.map(c => {
+          const contratador = getSingle(c.Contratadores);
+          return [c.id, contratador?.nombre || 'N/A'];
+        })
+      );
+
+      // Build income data first
+      const dataMap = buildIngresoData(contratos, tiposContratoData, contratadoresNombres, getSingle);
+
+      // Add cost data
+      detallesLote?.forEach((detalle: any) => {
+        const servicioAsignado = servicioAsignadoMap.get(detalle.id_evento_servicio);
+        if (!servicioAsignado) return;
+
+        // Only count costs for actually PAID services
+        if (servicioAsignado.estado_pago !== 'PAGADO') return;
+
+        const participacion = participacionMap.get(servicioAsignado.id_participacion);
+        if (!participacion) return;
+
+        const eventoContrato = eventoContratoMap.get(participacion.id_evento_contrato);
+        if (!eventoContrato) return;
+
+        const contrato = contratoMap.get(eventoContrato.id_contrato);
+        if (!contrato) return;
+
+        const tipoContrato = tipoContratoMap.get(contrato.id_tipo_contrato);
+        if (!tipoContrato) return;
+
+        const servicio = servicioInfoMap.get(servicioAsignado.id_servicio);
+        const personal = personalInfoMap.get(participacion.id_personal_participante);
+
+        const tipoNombre = tipoContrato.nombre;
+        if (dataMap[tipoNombre]) {
+          dataMap[tipoNombre].costoTotal += detalle.monto_pagado;
+          dataMap[tipoNombre].detallesCosto.push({
+            contratoId: contrato.id,
+            servicioNombre: servicio?.nombre || 'N/A',
+            montoPagado: detalle.monto_pagado,
+            personalNombre: personal?.nombre || 'N/A',
+            fechaEvento: contrato.fecha_hora_evento,
+          });
         }
-        dataMap[nombre].ingresoTotal += tipoContrato.ingreso_base;
-        dataMap[nombre].cantidadContratos++;
-        dataMap[nombre].detallesIngreso.push({
-            id: contrato.id,
-            fecha: contrato.fecha_hora_evento,
-            ingreso: tipoContrato.ingreso_base,
-            contratadorNombre: contratador.nombre,
-        });
-    });
+      });
 
-    costos.forEach(costo => {
-        const eventoAsignado = getSingle(costo.Evento_Servicios_Asignados);
-        const participacion = getSingle(eventoAsignado?.Participaciones_Personal);
-        const eventoContrato = getSingle(participacion?.Eventos_Contrato);
-        const servicio = getSingle(eventoAsignado?.Servicios);
-        const personal = getSingle(participacion?.Personal);
-
-        if (!eventoContrato || !servicio || !personal) return;
-
-        const idContrato = eventoContrato.id_contrato;
-        const contratoOriginal = contratos.find(c => c.id === idContrato);
-        if (contratoOriginal) {
-            const tipoContrato = getSingle(contratoOriginal.Tipos_Contrato);
-            if (!tipoContrato) return;
-
-            const nombre = tipoContrato.nombre;
-            dataMap[nombre].costoTotal += costo.monto_pagado;
-            dataMap[nombre].detallesCosto.push({
-                contratoId: idContrato,
-                servicioNombre: servicio.nombre,
-                montoPagado: costo.monto_pagado,
-                personalNombre: personal.nombre,
-                fechaEvento: contratoOriginal.fecha_hora_evento,
-            });
-        }
-    });
-
-    Object.values(dataMap).forEach(d => {
+      // Calculate net income and sort
+      Object.values(dataMap).forEach(d => {
         d.ingresoNeto = d.ingresoTotal - d.costoTotal;
         d.detallesIngreso.sort((a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime());
         d.detallesCosto.sort((a, b) => new Date(a.fechaEvento).getTime() - new Date(b.fechaEvento).getTime());
+      });
+
+      setReportData(Object.values(dataMap));
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Helper function to build income data
+  const buildIngresoData = (
+    contratos: any[],
+    tiposContratoData: any[] | null,
+    contratadoresNombres: any[] | null,
+    getSingle: (data: any) => any
+  ): { [key: string]: ReportData } => {
+    const dataMap: { [key: string]: ReportData } = {};
+    const tipoContratoMap = new Map(tiposContratoData?.map(tc => [tc.id, tc]));
+    const contratadorMap = new Map(
+      contratadoresNombres?.map(c => {
+        const contratador = getSingle(c.Contratadores);
+        return [c.id, contratador?.nombre || 'N/A'];
+      })
+    );
+
+    contratos.forEach(contrato => {
+      const tipoContrato = tipoContratoMap.get(contrato.id_tipo_contrato);
+      const contratadorNombre = contratadorMap.get(contrato.id);
+      if (!tipoContrato) return;
+
+      const nombre = tipoContrato.nombre;
+      if (!dataMap[nombre]) {
+        dataMap[nombre] = {
+          tipoContratoNombre: nombre,
+          ingresoTotal: 0,
+          costoTotal: 0,
+          ingresoNeto: 0,
+          cantidadContratos: 0,
+          detallesIngreso: [],
+          detallesCosto: [],
+        };
+      }
+      dataMap[nombre].ingresoTotal += tipoContrato.ingreso_base;
+      dataMap[nombre].cantidadContratos++;
+      dataMap[nombre].detallesIngreso.push({
+        id: contrato.id,
+        fecha: contrato.fecha_hora_evento,
+        ingreso: tipoContrato.ingreso_base,
+        contratadorNombre: contratadorNombre || 'N/A',
+      });
     });
 
-    setReportData(Object.values(dataMap));
-    setLoading(false);
+    return dataMap;
   };
 
   const handleExport = () => {
