@@ -178,39 +178,27 @@ export default function ReporteMensualPagosPage() {
       // PASO 1: Queries sin joins (evitar aliases de Supabase)
       // ========================================
 
-      // QUERY 1: Eventos-Contrato del mes (solo campos directos)
-      const { data: eventosContrato, error: eventosError } = await supabase
-        .from('Eventos_Contrato')
-        .select('id, fecha_evento, id_contrato')
-        .gte('fecha_evento', startDate)
-        .lt('fecha_evento', endDate);
+      // QUERY 1: Contratos del mes (CORRECTO: la fecha está en Contratos, no en Eventos_Contrato)
+      const { data: contratos, error: contratosError } = await supabase
+        .from('Contratos')
+        .select('id, fecha_hora_evento, id_tipo_contrato')
+        .gte('fecha_hora_evento', startDate)
+        .lt('fecha_hora_evento', endDate);
 
-      if (eventosError) throw eventosError;
+      if (contratosError) throw contratosError;
 
-      if (!eventosContrato || eventosContrato.length === 0) {
-        toast.error('No se encontraron eventos para el mes seleccionado.', { id: toastId });
+      if (!contratos || contratos.length === 0) {
+        toast.error('No se encontraron contratos para el mes seleccionado.', { id: toastId });
         setLoading(false);
         return;
       }
 
-      console.log('1. Eventos-Contrato:', eventosContrato.length);
+      console.log('1. Contratos del mes:', contratos.length);
 
-      const eventoContratoIds = eventosContrato.map(ec => ec.id);
-      const contratoIds = Array.from(new Set(eventosContrato.map(ec => ec.id_contrato)));
+      const contratoIds = contratos.map(c => c.id);
+      const tipoContratoIds = Array.from(new Set(contratos.map(c => c.id_tipo_contrato)));
 
-      // QUERY 2: Contratos (solo campos directos)
-      const { data: contratos, error: contratosError } = await supabase
-        .from('Contratos')
-        .select('id, id_tipo_contrato')
-        .in('id', contratoIds);
-
-      if (contratosError) throw contratosError;
-
-      console.log('2. Contratos:', contratos?.length || 0);
-
-      const tipoContratoIds = Array.from(new Set(contratos?.map(c => c.id_tipo_contrato) || []));
-
-      // QUERY 3: Tipos de Contrato (solo campos directos)
+      // QUERY 2: Tipos de Contrato (solo campos directos)
       const { data: tiposContrato, error: tiposError } = await supabase
         .from('Tipos_Contrato')
         .select('id, nombre')
@@ -218,7 +206,19 @@ export default function ReporteMensualPagosPage() {
 
       if (tiposError) throw tiposError;
 
-      console.log('3. Tipos Contrato:', tiposContrato?.length || 0);
+      console.log('2. Tipos Contrato:', tiposContrato?.length || 0);
+
+      // QUERY 3: Eventos-Contrato (tabla intermedia)
+      const { data: eventosContrato, error: eventosError } = await supabase
+        .from('Eventos_Contrato')
+        .select('id, id_contrato')
+        .in('id_contrato', contratoIds);
+
+      if (eventosError) throw eventosError;
+
+      console.log('3. Eventos-Contrato:', eventosContrato?.length || 0);
+
+      const eventoContratoIds = eventosContrato?.map(ec => ec.id) || [];
 
       // QUERY 4: Servicios de la organización (solo campos directos)
       const { data: servicios, error: serviciosError } = await supabase
