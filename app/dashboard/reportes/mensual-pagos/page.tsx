@@ -395,9 +395,8 @@ export default function ReporteMensualPagosPage() {
 
           pagoTotal += servicio.monto || 0;
 
-          // Verificar si está pagado
-          const lote = servicio.lote_pago;
-          if (lote && (lote.estado === 'PAGADO' || lote.estado === 'FINALIZADO')) {
+          // Verificar si está realmente pagado (no solo en lote finalizado)
+          if (servicio.estado_pago === 'PAGADO') {
             serviciosPagados++;
           }
         });
@@ -409,9 +408,9 @@ export default function ReporteMensualPagosPage() {
         if (serviciosPagados > 0) {
           const fechasPago = data.servicios
             .map((s: any) => {
-              const lote = s.lote_pago;
-              if (lote && (lote.estado === 'PAGADO' || lote.estado === 'FINALIZADO')) {
-                return new Date(lote.fecha_pago_programada);
+              // Solo obtener fecha de servicios realmente pagados
+              if (s.estado_pago === 'PAGADO' && s.lote_pago?.fecha_pago_programada) {
+                return new Date(s.lote_pago.fecha_pago_programada);
               }
               return null;
             })
