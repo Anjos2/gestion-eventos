@@ -5,6 +5,11 @@ import { FiChevronRight } from 'react-icons/fi';
 
 const reportes = [
   {
+    title: 'Reporte mensual de pagos',
+    description: 'Visualiza todos los pagos del mes con estado, totales por persona y tipo de contrato. Incluye exportación a Excel y PDF.',
+    href: '/dashboard/reportes/mensual-pagos',
+  },
+  {
     title: 'Reporte de pagos históricos por personal',
     description: 'Consulta todos los lotes de pago emitidos a un miembro del personal en un rango de fechas específico.',
     href: '/dashboard/reportes/pagos-personal',
