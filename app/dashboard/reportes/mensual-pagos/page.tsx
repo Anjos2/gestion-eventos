@@ -171,7 +171,7 @@ export default function ReporteMensualPagosPage() {
 
       console.log('Fetching servicios from', startDate, 'to', endDate);
 
-      // Obtener todos los servicios del mes
+      // Obtener todos los servicios de la organización
       const { data: servicios, error: serviciosError } = await supabase
         .from('Evento_Servicios_Asignados')
         .select(`
@@ -195,22 +195,37 @@ export default function ReporteMensualPagosPage() {
             )
           )
         `)
-        .eq('id_organizacion', organization.id)
-        .gte('Participaciones_Personal.Eventos_Contrato.fecha_evento', startDate)
-        .lt('Participaciones_Personal.Eventos_Contrato.fecha_evento', endDate);
+        .eq('id_organizacion', organization.id);
 
       if (serviciosError) throw serviciosError;
 
-      if (!servicios || servicios.length === 0) {
+      // Helper para obtener el primer elemento de un array o el elemento mismo
+      const getSingle = (data: any) => (Array.isArray(data) ? data[0] : data);
+
+      // Filtrar servicios por fecha del evento en el cliente
+      const serviciosFiltrados = servicios?.filter((servicio: any) => {
+        const participacion = getSingle(servicio.Participaciones_Personal);
+        const eventoContrato = getSingle(participacion?.Eventos_Contrato);
+        const fechaEvento = eventoContrato?.fecha_evento;
+
+        if (!fechaEvento) return false;
+
+        const fecha = new Date(fechaEvento);
+        const inicio = new Date(startDate);
+        const fin = new Date(endDate);
+
+        return fecha >= inicio && fecha < fin;
+      }) || [];
+
+      if (!serviciosFiltrados || serviciosFiltrados.length === 0) {
         toast.error('No se encontraron servicios para el mes seleccionado.', { id: toastId });
         setLoading(false);
         return;
       }
 
-      console.log('Servicios obtenidos:', servicios.length);
+      console.log('Servicios filtrados:', serviciosFiltrados.length);
 
       // Procesar datos
-      const getSingle = (data: any) => (Array.isArray(data) ? data[0] : data);
 
       // Agrupar por personal
       const personalMap: Record<number, {
@@ -219,7 +234,7 @@ export default function ReporteMensualPagosPage() {
         dni?: string | null;
       }> = {};
 
-      servicios.forEach((servicio: any) => {
+      serviciosFiltrados.forEach((servicio: any) => {
         const participacion = getSingle(servicio.Participaciones_Personal);
         const idPersonal = participacion?.id_personal_participante;
 
@@ -251,7 +266,7 @@ export default function ReporteMensualPagosPage() {
 
       // Obtener tipos de contrato únicos
       const tiposSet = new Set<string>();
-      servicios.forEach((servicio: any) => {
+      serviciosFiltrados.forEach((servicio: any) => {
         const participacion = getSingle(servicio.Participaciones_Personal);
         const eventoContrato = getSingle(participacion?.Eventos_Contrato);
         const contrato = getSingle(eventoContrato?.Contratos);
