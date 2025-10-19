@@ -118,7 +118,7 @@ const PersonalTable = ({ personal, onToggleStatus }: { personal: Personal[], onT
 // --- COMPONENTE DE LÓGICA Y CARGA DE DATOS ---
 function PersonalPageContent() {
   const searchParams = useSearchParams();
-  const { organization } = useOrganization();
+  const { organization, session } = useOrganization();
   const [personal, setPersonal] = useState<Personal[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
