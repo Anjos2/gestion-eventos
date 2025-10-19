@@ -223,7 +223,7 @@ export default function ReporteMensualPagosPage() {
       // QUERY 4: Servicios de la organización (solo campos directos)
       const { data: servicios, error: serviciosError } = await supabase
         .from('Evento_Servicios_Asignados')
-        .select('id, monto, estado_pago, id_evento_contrato')
+        .select('id, monto_pactado, estado_pago, id_evento_contrato')
         .eq('id_organizacion', organization.id)
         .in('id_evento_contrato', eventoContratoIds);
 
@@ -312,7 +312,7 @@ export default function ReporteMensualPagosPage() {
 
         return {
           id: servicio.id,
-          monto: servicio.monto,
+          monto: servicio.monto_pactado,
           estado_pago: servicio.estado_pago,
           id_personal_participante: part.id_personal_participante,
           tipo_contrato_nombre: tipoContrato?.nombre || 'Sin tipo',
