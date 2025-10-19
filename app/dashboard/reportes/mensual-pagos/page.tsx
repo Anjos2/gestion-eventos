@@ -169,84 +169,100 @@ export default function ReporteMensualPagosPage() {
       const nextYear = parseInt(month) === 12 ? parseInt(year) + 1 : parseInt(year);
       const endDate = `${nextYear}-${String(nextMonth).padStart(2, '0')}-01`;
 
-      console.log('Fetching participaciones from', startDate, 'to', endDate);
-
-      // Obtener participaciones con sus relaciones (evitando joins anidados complejos)
-      const { data: participaciones, error: participacionesError } = await supabase
-        .from('Participaciones_Personal')
-        .select(`
-          id,
-          id_personal_participante,
-          id_evento_servicio_asignado,
-          Eventos_Contrato(
-            fecha_evento,
-            Contratos(
-              Tipos_Contrato(nombre)
-            )
-          ),
-          Evento_Servicios_Asignados(
-            id,
-            monto,
-            estado_pago,
-            id_organizacion,
-            Detalles_Lote_Pago(
-              id_lote_pago,
-              Lotes_Pago(
-                estado,
-                fecha_pago_programada
-              )
-            )
-          )
-        `)
-        .eq('Evento_Servicios_Asignados.id_organizacion', organization.id);
-
-      if (participacionesError) throw participacionesError;
+      console.log('Fetching data from', startDate, 'to', endDate);
 
       // Helper para obtener el primer elemento de un array o el elemento mismo
       const getSingle = (data: any) => (Array.isArray(data) ? data[0] : data);
 
-      // Filtrar participaciones por fecha del evento
-      const participacionesFiltradas = participaciones?.filter((participacion: any) => {
-        const eventoContrato = getSingle(participacion.Eventos_Contrato);
-        const fechaEvento = eventoContrato?.fecha_evento;
+      // QUERY 1: Obtener eventos-contrato del mes con contratos y tipos
+      const { data: eventosContrato, error: eventosError } = await supabase
+        .from('Eventos_Contrato')
+        .select(`
+          id,
+          fecha_evento,
+          id_contrato,
+          Contratos(
+            id,
+            id_tipo_contrato,
+            Tipos_Contrato(nombre)
+          )
+        `)
+        .gte('fecha_evento', startDate)
+        .lt('fecha_evento', endDate);
 
-        if (!fechaEvento) return false;
+      if (eventosError) throw eventosError;
 
-        const fecha = new Date(fechaEvento);
-        const inicio = new Date(startDate);
-        const fin = new Date(endDate);
+      if (!eventosContrato || eventosContrato.length === 0) {
+        toast.error('No se encontraron eventos para el mes seleccionado.', { id: toastId });
+        setLoading(false);
+        return;
+      }
 
-        return fecha >= inicio && fecha < fin;
-      }) || [];
+      console.log('Eventos-Contrato encontrados:', eventosContrato.length);
 
-      if (!participacionesFiltradas || participacionesFiltradas.length === 0) {
+      const eventoContratoIds = eventosContrato.map(ec => ec.id);
+
+      // QUERY 2: Obtener servicios de la organización
+      const { data: servicios, error: serviciosError } = await supabase
+        .from('Evento_Servicios_Asignados')
+        .select(`
+          id,
+          monto,
+          estado_pago,
+          id_evento_contrato,
+          Detalles_Lote_Pago(
+            id_lote_pago,
+            Lotes_Pago(
+              estado,
+              fecha_pago_programada
+            )
+          )
+        `)
+        .eq('id_organizacion', organization.id)
+        .in('id_evento_contrato', eventoContratoIds);
+
+      if (serviciosError) throw serviciosError;
+
+      if (!servicios || servicios.length === 0) {
         toast.error('No se encontraron servicios para el mes seleccionado.', { id: toastId });
         setLoading(false);
         return;
       }
 
-      console.log('Participaciones filtradas:', participacionesFiltradas.length);
+      console.log('Servicios encontrados:', servicios.length);
 
-      // Procesar datos - convertir participaciones a formato de servicios
-      const serviciosPorId = new Map();
+      const servicioIds = servicios.map(s => s.id);
 
-      participacionesFiltradas.forEach((part: any) => {
-        const servicio = getSingle(part.Evento_Servicios_Asignados);
-        if (!servicio) return;
+      // QUERY 3: Obtener participaciones de personal
+      const { data: participaciones, error: participacionesError } = await supabase
+        .from('Participaciones_Personal')
+        .select('id, id_personal_participante, id_evento_servicio_asignado')
+        .in('id_evento_servicio_asignado', servicioIds);
 
-        const servicioData = {
+      if (participacionesError) throw participacionesError;
+
+      console.log('Participaciones encontradas:', participaciones?.length || 0);
+
+      // Crear mapas para acceso rápido
+      const eventoContratoMap = new Map(eventosContrato.map(ec => [ec.id, ec]));
+      const servicioMap = new Map(servicios.map(s => [s.id, s]));
+
+      // Combinar datos: crear servicios con información completa
+      const serviciosFiltrados = participaciones?.map((part: any) => {
+        const servicio = servicioMap.get(part.id_evento_servicio_asignado);
+        if (!servicio) return null;
+
+        const eventoContrato = eventoContratoMap.get(servicio.id_evento_contrato);
+
+        return {
           id: servicio.id,
           monto: servicio.monto,
           estado_pago: servicio.estado_pago,
           id_personal_participante: part.id_personal_participante,
-          Eventos_Contrato: part.Eventos_Contrato,
+          Eventos_Contrato: eventoContrato,
           Detalles_Lote_Pago: servicio.Detalles_Lote_Pago
         };
-
-        serviciosPorId.set(servicio.id, servicioData);
-      });
-
-      const serviciosFiltrados = Array.from(serviciosPorId.values());
+      }).filter(s => s !== null) || [];
 
       // Agrupar por personal
       const personalMap: Record<number, {
