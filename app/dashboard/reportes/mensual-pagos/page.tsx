@@ -169,43 +169,45 @@ export default function ReporteMensualPagosPage() {
       const nextYear = parseInt(month) === 12 ? parseInt(year) + 1 : parseInt(year);
       const endDate = `${nextYear}-${String(nextMonth).padStart(2, '0')}-01`;
 
-      console.log('Fetching servicios from', startDate, 'to', endDate);
+      console.log('Fetching participaciones from', startDate, 'to', endDate);
 
-      // Obtener todos los servicios de la organización
-      const { data: servicios, error: serviciosError } = await supabase
-        .from('Evento_Servicios_Asignados')
+      // Obtener participaciones con sus relaciones (evitando joins anidados complejos)
+      const { data: participaciones, error: participacionesError } = await supabase
+        .from('Participaciones_Personal')
         .select(`
           id,
-          monto,
-          estado_pago,
-          Participaciones_Personal!inner(
-            id_personal_participante,
-            Eventos_Contrato!inner(
-              fecha_evento,
-              Contratos!inner(
-                Tipos_Contrato(nombre)
-              )
+          id_personal_participante,
+          id_evento_servicio_asignado,
+          Eventos_Contrato(
+            fecha_evento,
+            Contratos(
+              Tipos_Contrato(nombre)
             )
           ),
-          Detalles_Lote_Pago(
-            id_lote_pago,
-            Lotes_Pago(
-              estado,
-              fecha_pago_programada
+          Evento_Servicios_Asignados(
+            id,
+            monto,
+            estado_pago,
+            id_organizacion,
+            Detalles_Lote_Pago(
+              id_lote_pago,
+              Lotes_Pago(
+                estado,
+                fecha_pago_programada
+              )
             )
           )
         `)
-        .eq('id_organizacion', organization.id);
+        .eq('Evento_Servicios_Asignados.id_organizacion', organization.id);
 
-      if (serviciosError) throw serviciosError;
+      if (participacionesError) throw participacionesError;
 
       // Helper para obtener el primer elemento de un array o el elemento mismo
       const getSingle = (data: any) => (Array.isArray(data) ? data[0] : data);
 
-      // Filtrar servicios por fecha del evento en el cliente
-      const serviciosFiltrados = servicios?.filter((servicio: any) => {
-        const participacion = getSingle(servicio.Participaciones_Personal);
-        const eventoContrato = getSingle(participacion?.Eventos_Contrato);
+      // Filtrar participaciones por fecha del evento
+      const participacionesFiltradas = participaciones?.filter((participacion: any) => {
+        const eventoContrato = getSingle(participacion.Eventos_Contrato);
         const fechaEvento = eventoContrato?.fecha_evento;
 
         if (!fechaEvento) return false;
@@ -217,15 +219,34 @@ export default function ReporteMensualPagosPage() {
         return fecha >= inicio && fecha < fin;
       }) || [];
 
-      if (!serviciosFiltrados || serviciosFiltrados.length === 0) {
+      if (!participacionesFiltradas || participacionesFiltradas.length === 0) {
         toast.error('No se encontraron servicios para el mes seleccionado.', { id: toastId });
         setLoading(false);
         return;
       }
 
-      console.log('Servicios filtrados:', serviciosFiltrados.length);
+      console.log('Participaciones filtradas:', participacionesFiltradas.length);
 
-      // Procesar datos
+      // Procesar datos - convertir participaciones a formato de servicios
+      const serviciosPorId = new Map();
+
+      participacionesFiltradas.forEach((part: any) => {
+        const servicio = getSingle(part.Evento_Servicios_Asignados);
+        if (!servicio) return;
+
+        const servicioData = {
+          id: servicio.id,
+          monto: servicio.monto,
+          estado_pago: servicio.estado_pago,
+          id_personal_participante: part.id_personal_participante,
+          Eventos_Contrato: part.Eventos_Contrato,
+          Detalles_Lote_Pago: servicio.Detalles_Lote_Pago
+        };
+
+        serviciosPorId.set(servicio.id, servicioData);
+      });
+
+      const serviciosFiltrados = Array.from(serviciosPorId.values());
 
       // Agrupar por personal
       const personalMap: Record<number, {
@@ -235,8 +256,7 @@ export default function ReporteMensualPagosPage() {
       }> = {};
 
       serviciosFiltrados.forEach((servicio: any) => {
-        const participacion = getSingle(servicio.Participaciones_Personal);
-        const idPersonal = participacion?.id_personal_participante;
+        const idPersonal = servicio.id_personal_participante;
 
         if (idPersonal) {
           if (!personalMap[idPersonal]) {
@@ -267,8 +287,7 @@ export default function ReporteMensualPagosPage() {
       // Obtener tipos de contrato únicos
       const tiposSet = new Set<string>();
       serviciosFiltrados.forEach((servicio: any) => {
-        const participacion = getSingle(servicio.Participaciones_Personal);
-        const eventoContrato = getSingle(participacion?.Eventos_Contrato);
+        const eventoContrato = getSingle(servicio.Eventos_Contrato);
         const contrato = getSingle(eventoContrato?.Contratos);
         const tipoContrato = getSingle(contrato?.Tipos_Contrato);
         if (tipoContrato?.nombre) {
@@ -296,8 +315,7 @@ export default function ReporteMensualPagosPage() {
         let serviciosPagados = 0;
 
         data.servicios.forEach((servicio: any) => {
-          const participacion = getSingle(servicio.Participaciones_Personal);
-          const eventoContrato = getSingle(participacion?.Eventos_Contrato);
+          const eventoContrato = getSingle(servicio.Eventos_Contrato);
           const contrato = getSingle(eventoContrato?.Contratos);
           const tipoContrato = getSingle(contrato?.Tipos_Contrato);
           const nombreTipo = tipoContrato?.nombre || 'Sin tipo';
