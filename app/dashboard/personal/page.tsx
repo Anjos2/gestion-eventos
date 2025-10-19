@@ -64,7 +64,7 @@ const AddPersonalForm = ({ onAddPersonal }: { onAddPersonal: (name: string, emai
   );
 };
 
-const PersonalTable = ({ personal, onToggleStatus, onGenerateInviteLink }: { personal: Personal[], onToggleStatus: (id: number, currentStatus: boolean) => void, onGenerateInviteLink: (orgId: number) => void }) => (
+const PersonalTable = ({ personal, onToggleStatus }: { personal: Personal[], onToggleStatus: (id: number, currentStatus: boolean) => void }) => (
   <div className="bg-slate-800 rounded-xl shadow-lg border border-slate-700">
     <div className="overflow-x-auto">
       <table className="min-w-full divide-y divide-slate-700">
@@ -75,7 +75,7 @@ const PersonalTable = ({ personal, onToggleStatus, onGenerateInviteLink }: { per
             <th className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase whitespace-nowrap">Rol</th>
             <th className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase whitespace-nowrap">Estado</th>
             <th className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase whitespace-nowrap">Usuario</th>
-            <th className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase whitespace-nowrap">Acciones</th>
+            <th className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase whitespace-nowrap">Activar/Desactivar</th>
           </tr>
         </thead>
         <tbody className="bg-slate-800 divide-y divide-slate-700">
@@ -94,7 +94,7 @@ const PersonalTable = ({ personal, onToggleStatus, onGenerateInviteLink }: { per
                   {p.supabase_user_id ? (
                     <span className="px-3 py-1 text-xs font-semibold rounded-full bg-blue-900 text-blue-200">Registrado</span>
                   ) : (
-                    <button onClick={() => onGenerateInviteLink(p.id_organizacion!)} className="text-teal-400 hover:text-teal-300">Generar enlace</button>
+                    <span className="px-3 py-1 text-xs font-semibold rounded-full bg-gray-700 text-gray-300">Sin cuenta</span>
                   )}
                 </td>
                 <td className="px-6 py-4 text-sm font-medium whitespace-nowrap">
@@ -127,90 +127,89 @@ function PersonalPageContent() {
   
   const currentPage = parseInt(searchParams.get('page') || '1', 10);
 
+  const fetchPersonal = async () => {
+    if (!organization) return;
+
+    try {
+      setLoading(true);
+      const offset = (currentPage - 1) * ITEMS_PER_PAGE;
+
+      // Usar funciones RPC en lugar de SELECT directo para evitar problemas de RLS
+      const [
+        { data: personalData, error: personalError },
+        { data: count, error: countError }
+      ] = await Promise.all([
+        supabase.rpc('get_organization_personnel', {
+          p_limit: ITEMS_PER_PAGE,
+          p_offset: offset
+        }),
+        supabase.rpc('count_organization_personnel')
+      ]);
+
+      if (personalError) throw new Error(personalError.message);
+      if (countError) throw new Error(countError.message);
+
+      setPersonal(personalData || []);
+      setTotalCount(count || 0);
+
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchPersonal = async () => {
-      if (!organization) return;
-
-      try {
-        setLoading(true);
-        const from = (currentPage - 1) * ITEMS_PER_PAGE;
-        const to = from + ITEMS_PER_PAGE - 1;
-
-        const { data: personalData, error: personalError, count } = await supabase
-          .from('Personal')
-          .select('*', { count: 'exact' })
-          .eq('id_organizacion', organization.id)
-          .order('id', { ascending: false })
-          .range(from, to);
-
-        if (personalError) throw new Error(personalError.message);
-
-        setPersonal(personalData || []);
-        setTotalCount(count || 0);
-
-      } catch (err: any) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchPersonal();
   }, [currentPage, organization, supabase]);
 
   const handleAddPersonal = async (name: string, email: string, rol: string) => {
-    if (!organization) return;
+    if (!organization || !session) return;
     const toastId = toast.loading('Añadiendo personal...');
     try {
-      // Usar función RPC en lugar de INSERT directo para evitar problemas de RLS
-      const { data, error } = await supabase.rpc('add_personal_member', {
-        p_nombre: name,
-        p_email: email,
-        p_rol: rol,
-        p_id_organizacion: organization.id
+      // Llamar al API route que crea el usuario automáticamente
+      const response = await fetch('/api/create-personal', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          nombre: name,
+          email: email,
+          rol: rol,
+          id_organizacion: organization.id
+        }),
       });
 
-      if (error) throw error;
-      if (!data) throw new Error('No se recibió respuesta al crear el personal.');
+      const result = await response.json();
 
-      // Refrescar la primera página para ver el nuevo registro
-      if (currentPage === 1) {
-        setPersonal([data, ...personal.slice(0, ITEMS_PER_PAGE - 1)]);
-        setTotalCount(prev => prev + 1);
+      if (!response.ok) {
+        throw new Error(result.error || 'Error al crear el personal');
       }
-      toast.success('Personal añadido con éxito!', { id: toastId });
+
+      // Mostrar mensaje de éxito con las credenciales
+      toast.success(
+        (t) => (
+          <div className="text-white">
+            <p className="font-bold mb-2">✅ Personal creado con éxito</p>
+            <div className="bg-slate-700 p-3 rounded-lg text-sm space-y-1">
+              <p><span className="font-semibold">Usuario:</span> {result.credentials.email}</p>
+              <p><span className="font-semibold">Contraseña:</span> {result.credentials.password}</p>
+              <p className="text-xs text-slate-300 mt-2">⚠️ El usuario puede cambiar su contraseña desde su perfil</p>
+            </div>
+          </div>
+        ),
+        { id: toastId, duration: 10000 }
+      );
+
+      // Refrescar la lista completa para mostrar el nuevo registro
+      await fetchPersonal();
     } catch (err: any) {
       toast.error(`Error al añadir personal: ${err.message}`, { id: toastId });
     }
   };
 
-  const handleGenerateInviteLink = (orgId: number) => {
-    if (!orgId) {
-      toast.error('Error: No se pudo determinar la organización.');
-      return;
-    }
-    const inviteLink = `${process.env.NEXT_PUBLIC_SITE_URL || window.location.origin}/auth/register-personal?org_id=${orgId}`;
-    toast(() => (
-      <div className="text-white">
-        <p className="font-bold mb-2">Copia este enlace para invitar:</p>
-        <input 
-          type="text" 
-          readOnly 
-          value={inviteLink} 
-          className="w-full p-2 bg-slate-700 border border-slate-600 rounded-lg mb-2" 
-        />
-        <button 
-          onClick={() => {
-            navigator.clipboard.writeText(inviteLink);
-            toast.success('Enlace copiado al portapapeles');
-          }}
-          className="w-full px-4 py-2 bg-sky-600 text-white font-semibold rounded-lg hover:bg-sky-700"
-        >
-          Copiar enlace
-        </button>
-      </div>
-    ), { duration: 10000 });
-  };
 
   const handleToggleStatus = async (id: number, currentStatus: boolean) => {
     const actionText = currentStatus ? 'desactivar' : 'activar';
@@ -257,7 +256,7 @@ function PersonalPageContent() {
     <div>
       <h1 className="text-3xl font-bold text-white mb-6">Gestión de personal</h1>
       <AddPersonalForm onAddPersonal={handleAddPersonal} />
-      <PersonalTable personal={personal} onToggleStatus={handleToggleStatus} onGenerateInviteLink={handleGenerateInviteLink} />
+      <PersonalTable personal={personal} onToggleStatus={handleToggleStatus} />
       <Pagination
         currentPage={currentPage}
         totalCount={totalCount}

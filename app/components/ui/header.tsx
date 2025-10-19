@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useOrganization } from '@/app/context/OrganizationContext';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { useRouter } from 'next/navigation';
-import { FiMenu, FiUser, FiLogOut, FiPhone } from 'react-icons/fi';
+import { FiMenu, FiUser, FiLogOut, FiPhone, FiLock } from 'react-icons/fi';
 
 interface HeaderProps {
   toggleSidebar: () => void;
@@ -57,10 +57,21 @@ export default function Header({ toggleSidebar }: HeaderProps) {
           </button>
 
           {isMenuOpen && (
-            <div className="absolute right-0 mt-2 w-48 bg-slate-800 rounded-md shadow-lg py-1 z-50">
+            <div className="absolute right-0 mt-2 w-56 bg-slate-800 rounded-md shadow-lg py-1 z-50 border border-slate-700">
+              <button
+                onClick={() => {
+                  setMenuOpen(false);
+                  router.push('/dashboard/perfil/cambiar-password');
+                }}
+                className="flex items-center w-full px-4 py-2 text-sm text-slate-300 hover:bg-slate-700 transition-colors"
+              >
+                <FiLock className="mr-2" />
+                Cambiar contraseña
+              </button>
+              <div className="border-t border-slate-700 my-1"></div>
               <button
                 onClick={handleLogout}
-                className="flex items-center w-full px-4 py-2 text-sm text-slate-300 hover:bg-slate-700"
+                className="flex items-center w-full px-4 py-2 text-sm text-slate-300 hover:bg-slate-700 transition-colors"
               >
                 <FiLogOut className="mr-2" />
                 Cerrar sesión
