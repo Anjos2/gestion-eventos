@@ -177,8 +177,8 @@ export default function RentabilidadContratoReportePage() {
       // QUERY 7: Get Detalles_Lote_Pago (only for PAID services)
       const { data: detallesLote, error: detallesError } = await supabase
         .from('Detalles_Lote_Pago')
-        .select('id, id_evento_servicio, monto_pagado')
-        .in('id_evento_servicio', servicioAsignadoIds);
+        .select('id_evento_servicio_asignado, monto_pagado')
+        .in('id_evento_servicio_asignado', servicioAsignadoIds);
 
       if (detallesError) throw detallesError;
 
@@ -218,7 +218,7 @@ export default function RentabilidadContratoReportePage() {
 
       // Add cost data
       detallesLote?.forEach((detalle: any) => {
-        const servicioAsignado = servicioAsignadoMap.get(detalle.id_evento_servicio);
+        const servicioAsignado = servicioAsignadoMap.get(detalle.id_evento_servicio_asignado);
         if (!servicioAsignado) return;
 
         // Only count costs for actually PAID services
