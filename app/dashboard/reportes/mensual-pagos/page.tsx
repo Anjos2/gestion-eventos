@@ -220,12 +220,31 @@ export default function ReporteMensualPagosPage() {
 
       const eventoContratoIds = eventosContrato?.map(ec => ec.id) || [];
 
-      // QUERY 4: Servicios de la organización (solo campos directos)
+      // QUERY 4: Participaciones de personal (por id_evento_contrato)
+      const { data: participaciones, error: participacionesError } = await supabase
+        .from('Participaciones_Personal')
+        .select('id, id_personal_participante, id_evento_contrato')
+        .in('id_evento_contrato', eventoContratoIds);
+
+      if (participacionesError) throw participacionesError;
+
+      if (!participaciones || participaciones.length === 0) {
+        toast.error('No se encontraron participaciones para el mes seleccionado.', { id: toastId });
+        setLoading(false);
+        return;
+      }
+
+      console.log('4. Participaciones:', participaciones.length);
+
+      const participacionIds = participaciones.map(p => p.id);
+      const personalIds = Array.from(new Set(participaciones.map(p => p.id_personal_participante)));
+
+      // QUERY 5: Servicios asignados (por id_participacion, NO por id_evento_contrato)
       const { data: servicios, error: serviciosError } = await supabase
         .from('Evento_Servicios_Asignados')
-        .select('id, monto_pactado, estado_pago, id_evento_contrato')
+        .select('id, id_participacion, monto_pactado, estado_pago')
         .eq('id_organizacion', organization.id)
-        .in('id_evento_contrato', eventoContratoIds);
+        .in('id_participacion', participacionIds);
 
       if (serviciosError) throw serviciosError;
 
@@ -235,23 +254,23 @@ export default function ReporteMensualPagosPage() {
         return;
       }
 
-      console.log('4. Servicios:', servicios.length);
+      console.log('5. Servicios:', servicios.length);
 
       const servicioIds = servicios.map(s => s.id);
 
-      // QUERY 5: Detalles de Lote de Pago (solo campos directos)
+      // QUERY 6: Detalles de Lote de Pago (solo campos directos)
       const { data: detallesLote, error: detallesError } = await supabase
         .from('Detalles_Lote_Pago')
-        .select('id, id_evento_servicio_asignado, id_lote_pago')
+        .select('id_evento_servicio_asignado, id_lote_pago')
         .in('id_evento_servicio_asignado', servicioIds);
 
       if (detallesError) throw detallesError;
 
-      console.log('5. Detalles Lote:', detallesLote?.length || 0);
+      console.log('6. Detalles Lote:', detallesLote?.length || 0);
 
       const loteIds = Array.from(new Set(detallesLote?.map(d => d.id_lote_pago) || []));
 
-      // QUERY 6: Lotes de Pago (solo campos directos)
+      // QUERY 7: Lotes de Pago (solo campos directos)
       const { data: lotesPago, error: lotesError } = await supabase
         .from('Lotes_Pago')
         .select('id, estado, fecha_pago_programada')
@@ -259,19 +278,7 @@ export default function ReporteMensualPagosPage() {
 
       if (lotesError) throw lotesError;
 
-      console.log('6. Lotes Pago:', lotesPago?.length || 0);
-
-      // QUERY 7: Participaciones de personal (solo campos directos)
-      const { data: participaciones, error: participacionesError } = await supabase
-        .from('Participaciones_Personal')
-        .select('id, id_personal_participante, id_evento_servicio_asignado')
-        .in('id_evento_servicio_asignado', servicioIds);
-
-      if (participacionesError) throw participacionesError;
-
-      console.log('7. Participaciones:', participaciones?.length || 0);
-
-      const personalIds = Array.from(new Set(participaciones?.map(p => p.id_personal_participante) || []));
+      console.log('7. Lotes Pago:', lotesPago?.length || 0);
 
       // QUERY 8: Personal (solo campos directos)
       const { data: personalData, error: personalError } = await supabase
@@ -289,8 +296,8 @@ export default function ReporteMensualPagosPage() {
 
       const tipoContratoMap = new Map(tiposContrato?.map(tc => [tc.id, tc]) || []);
       const contratoMap = new Map(contratos?.map(c => [c.id, c]) || []);
-      const eventoContratoMap = new Map(eventosContrato.map(ec => [ec.id, ec]));
-      const servicioMap = new Map(servicios.map(s => [s.id, s]));
+      const eventoContratoMap = new Map(eventosContrato?.map(ec => [ec.id, ec]) || []);
+      const participacionMap = new Map(participaciones.map(p => [p.id, p]));
       const detalleLoteMap = new Map(detallesLote?.map(dl => [dl.id_evento_servicio_asignado, dl]) || []);
       const lotePagoMap = new Map(lotesPago?.map(lp => [lp.id, lp]) || []);
       const personalMap = new Map(personalData?.map(p => [p.id, p]) || []);
@@ -299,11 +306,12 @@ export default function ReporteMensualPagosPage() {
       // PASO 3: Combinar datos en estructura completa
       // ========================================
 
-      const serviciosFiltrados = participaciones?.map((part: any) => {
-        const servicio = servicioMap.get(part.id_evento_servicio_asignado);
-        if (!servicio) return null;
+      const serviciosFiltrados = servicios.map((servicio: any) => {
+        // La cadena correcta: Servicio → Participación → Evento_Contrato → Contrato → Tipo_Contrato
+        const participacion = participacionMap.get(servicio.id_participacion);
+        if (!participacion) return null;
 
-        const eventoContrato = eventoContratoMap.get(servicio.id_evento_contrato);
+        const eventoContrato = eventoContratoMap.get(participacion.id_evento_contrato);
         const contrato = contratoMap.get(eventoContrato?.id_contrato);
         const tipoContrato = tipoContratoMap.get(contrato?.id_tipo_contrato);
 
@@ -314,7 +322,7 @@ export default function ReporteMensualPagosPage() {
           id: servicio.id,
           monto: servicio.monto_pactado,
           estado_pago: servicio.estado_pago,
-          id_personal_participante: part.id_personal_participante,
+          id_personal_participante: participacion.id_personal_participante,
           tipo_contrato_nombre: tipoContrato?.nombre || 'Sin tipo',
           lote_pago: lotePago ? {
             estado: lotePago.estado,
