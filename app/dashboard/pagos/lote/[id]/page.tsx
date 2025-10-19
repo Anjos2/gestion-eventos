@@ -40,39 +40,136 @@ export default function LotePagoPage() {
     const style = document.createElement('style');
     style.innerHTML = `
       @media print {
+        @page {
+          margin: 2cm;
+          size: landscape;
+        }
+
+        body {
+          font-family: 'Arial', sans-serif;
+          color: #000;
+          background: white;
+        }
+
         body * {
           visibility: hidden;
         }
+
         #print-area, #print-area * {
           visibility: visible;
         }
+
         #print-area {
           position: absolute;
           left: 0;
           top: 0;
           width: 100%;
+          background: white;
         }
+
         .no-print {
           display: none !important;
         }
-        table {
-          page-break-inside: auto;
+
+        .print-header {
+          margin-bottom: 25px;
+          padding-bottom: 15px;
+          border-bottom: 3px solid #000;
+          text-align: center;
         }
+
+        .print-header h1 {
+          font-size: 24px;
+          font-weight: bold;
+          margin: 0 0 10px 0;
+          text-transform: uppercase;
+        }
+
+        .print-header p {
+          margin: 3px 0;
+          font-size: 12px;
+        }
+
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          page-break-inside: auto;
+          font-size: 10px;
+        }
+
         tr {
           page-break-inside: avoid;
           page-break-after: auto;
         }
+
         thead {
           display: table-header-group;
         }
-        .print-header {
-          margin-bottom: 20px;
-          text-align: center;
+
+        thead tr {
+          background-color: #e5e7eb !important;
         }
+
+        th {
+          background-color: #e5e7eb !important;
+          color: #000 !important;
+          font-weight: bold !important;
+          padding: 10px 8px !important;
+          border: 1px solid #000 !important;
+          text-align: center !important;
+          font-size: 9px !important;
+        }
+
+        td {
+          padding: 8px !important;
+          border: 1px solid #000 !important;
+          color: #000 !important;
+        }
+
+        tbody tr:nth-child(even) {
+          background-color: #f9fafb !important;
+        }
+
+        tfoot {
+          background-color: #dbeafe !important;
+          font-weight: bold;
+        }
+
+        tfoot td {
+          font-size: 11px !important;
+          padding: 12px 8px !important;
+          border: 2px solid #000 !important;
+        }
+
+        .print-footer {
+          margin-top: 30px;
+          padding-top: 20px;
+          border-top: 2px solid #000;
+          display: block !important;
+        }
+
+        .print-signature-section {
+          display: flex;
+          justify-content: space-around;
+          margin-top: 40px;
+        }
+
+        .print-signature-box {
+          text-align: center;
+          min-width: 200px;
+        }
+
         .print-signature-line {
-          border-bottom: 1px solid #000;
-          height: 40px;
-          width: 150px;
+          border-bottom: 2px solid #000;
+          height: 50px;
+          margin-bottom: 5px;
+        }
+
+        .print-notes {
+          margin-top: 30px;
+          padding: 15px;
+          border: 1px solid #000;
+          min-height: 80px;
         }
       }
     `;
@@ -192,6 +289,35 @@ export default function LotePagoPage() {
     }
   };
 
+  const calcularTotales = () => {
+    const totales = {
+      total_contratos: 0,
+      monto_total: 0,
+      por_tipo: {} as Record<string, { cantidad: number; monto: number }>
+    };
+
+    // Inicializar totales por tipo
+    tiposContrato.forEach(tipo => {
+      totales.por_tipo[tipo] = { cantidad: 0, monto: 0 };
+    });
+
+    // Sumar todos los valores
+    personalEnLote.forEach(personal => {
+      totales.total_contratos += personal.total_contratos;
+      totales.monto_total += personal.monto_asignado;
+
+      tiposContrato.forEach(tipo => {
+        const data = personal.contratos_por_tipo[tipo];
+        if (data) {
+          totales.por_tipo[tipo].cantidad += data.cantidad;
+          totales.por_tipo[tipo].monto += data.monto;
+        }
+      });
+    });
+
+    return totales;
+  };
+
   const handleToggleCobro = async (idPersonal: number) => {
     try {
       const personal = personalEnLote.find(p => p.id_personal === idPersonal);
@@ -240,10 +366,17 @@ export default function LotePagoPage() {
   };
 
   const handleDescargarExcel = () => {
-    // Construir datos para Excel
     const excelData: any[] = [];
+    const totales = calcularTotales();
 
-    // Encabezados
+    // Header profesional
+    excelData.push([organization?.nombre || 'Organización']);
+    excelData.push([`REPORTE DE LOTE DE PAGO #${id}`]);
+    excelData.push([`Fecha de Pago: ${fechaPago ? new Date(fechaPago).toLocaleDateString('es-PE') : 'No programada'}`]);
+    excelData.push([`Fecha de Emisión: ${new Date().toLocaleDateString('es-PE')}`]);
+    excelData.push([]); // Línea en blanco
+
+    // Encabezados de tabla
     const headers = ['Nombre', 'Total Contratos', 'Monto Total'];
     tiposContrato.forEach(tipo => {
       headers.push(`${tipo} (Cant)`);
@@ -252,31 +385,74 @@ export default function LotePagoPage() {
     headers.push('Firma');
     excelData.push(headers);
 
-    // Datos
+    // Datos del personal
     personalEnLote.forEach(personal => {
       const row: any[] = [
         personal.nombre_personal,
         personal.total_contratos,
-        `S/ ${personal.monto_asignado.toFixed(2)}`
+        personal.monto_asignado.toFixed(2)
       ];
 
       tiposContrato.forEach(tipo => {
         const data = personal.contratos_por_tipo[tipo] || { cantidad: 0, monto: 0 };
         row.push(data.cantidad);
-        row.push(`S/ ${data.monto.toFixed(2)}`);
+        row.push(data.monto.toFixed(2));
       });
 
-      row.push(''); // Columna firma
+      row.push('_________________'); // Línea para firma
       excelData.push(row);
     });
 
-    // Crear workbook y worksheet
+    // Fila de totales
+    const rowTotales: any[] = [
+      'TOTAL',
+      totales.total_contratos,
+      totales.monto_total.toFixed(2)
+    ];
+
+    tiposContrato.forEach(tipo => {
+      const data = totales.por_tipo[tipo] || { cantidad: 0, monto: 0 };
+      rowTotales.push(data.cantidad);
+      rowTotales.push(data.monto.toFixed(2));
+    });
+
+    rowTotales.push(''); // Columna firma vacía
+    excelData.push(rowTotales);
+
+    // Crear worksheet
     const ws = XLSX.utils.aoa_to_sheet(excelData);
+
+    // Configurar anchos de columna
+    const colWidths: any[] = [
+      { wch: 25 }, // Nombre
+      { wch: 15 }, // Total Contratos
+      { wch: 12 }  // Monto Total
+    ];
+
+    tiposContrato.forEach(() => {
+      colWidths.push({ wch: 10 }); // Cantidad
+      colWidths.push({ wch: 12 }); // Monto
+    });
+    colWidths.push({ wch: 20 }); // Firma
+
+    ws['!cols'] = colWidths;
+
+    // Merge cells para el header
+    if (!ws['!merges']) ws['!merges'] = [];
+    ws['!merges'].push(
+      { s: { r: 0, c: 0 }, e: { r: 0, c: headers.length - 1 } }, // Nombre organización
+      { s: { r: 1, c: 0 }, e: { r: 1, c: headers.length - 1 } }, // Título
+      { s: { r: 2, c: 0 }, e: { r: 2, c: headers.length - 1 } }, // Fecha pago
+      { s: { r: 3, c: 0 }, e: { r: 3, c: headers.length - 1 } }  // Fecha emisión
+    );
+
+    // Crear workbook
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Reporte de Pagos');
 
     // Descargar
-    XLSX.writeFile(wb, `Lote_Pago_${id}_${new Date().toISOString().slice(0,10)}.xlsx`);
+    const fecha = new Date().toISOString().slice(0,10);
+    XLSX.writeFile(wb, `Lote_Pago_${id}_${fecha}.xlsx`);
     toast.success('Excel descargado exitosamente');
   };
 
@@ -471,10 +647,12 @@ export default function LotePagoPage() {
 
       {/* Área de impresión */}
       <div id="print-area">
-        <div className="print-header hidden print:block mb-6">
-          <h1 className="text-2xl font-bold">Lote de Pago #{id}</h1>
-          <p className="text-sm mt-2">Organización: {organization?.nombre}</p>
-          {fechaPago && <p className="text-sm">Fecha de Pago: {new Date(fechaPago).toLocaleDateString()}</p>}
+        <div className="print-header hidden print:block">
+          <h1>{organization?.nombre || 'Organización'}</h1>
+          <h1>Reporte de Lote de Pago #{id}</h1>
+          <p><strong>Fecha de Pago Programada:</strong> {fechaPago ? new Date(fechaPago).toLocaleDateString('es-PE', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : 'No programada'}</p>
+          <p><strong>Fecha de Emisión:</strong> {new Date().toLocaleDateString('es-PE', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+          <p><strong>Total de Personas:</strong> {personalEnLote.length} | <strong>Monto Total:</strong> S/ {calcularTotales().monto_total.toFixed(2)}</p>
         </div>
 
         {/* Tabla de reporte */}
@@ -558,9 +736,74 @@ export default function LotePagoPage() {
                 </tr>
               ))}
             </tbody>
+            <tfoot className="bg-slate-900 print:bg-gray-200">
+              <tr className="border-t-2 border-sky-500 print:border-black">
+                <td className="px-4 py-4 font-bold text-white print:text-black text-lg">
+                  TOTAL
+                </td>
+                <td className="px-4 py-4 text-center font-bold text-white print:text-black text-lg">
+                  {calcularTotales().total_contratos}
+                </td>
+                <td className="px-4 py-4 text-right font-bold text-yellow-400 print:text-black text-lg">
+                  S/ {calcularTotales().monto_total.toFixed(2)}
+                </td>
+                {tiposContrato.map(tipo => {
+                  const data = calcularTotales().por_tipo[tipo] || { cantidad: 0, monto: 0 };
+                  return (
+                    <React.Fragment key={tipo}>
+                      <td className="px-4 py-4 text-center font-bold text-white print:text-black border-l border-slate-700 print:border-black">
+                        {data.cantidad}
+                      </td>
+                      <td className="px-4 py-4 text-right font-bold text-white print:text-black">
+                        S/ {data.monto.toFixed(2)}
+                      </td>
+                    </React.Fragment>
+                  );
+                })}
+                <td className="px-4 py-4 border-l border-slate-700 print:border-black">
+                  {/* Vacío - columna firma */}
+                </td>
+                {loteInfo.estado === 'EN_PREPARACION' && (
+                  <td className="px-4 py-4">
+                    {/* Vacío - columna cobró */}
+                  </td>
+                )}
+              </tr>
+            </tfoot>
           </table>
         </div>
       </div>
+
+        {/* Footer de impresión */}
+        <div className="print-footer hidden print:block">
+          <div className="print-signature-section">
+            <div className="print-signature-box">
+              <div className="print-signature-line"></div>
+              <p style={{ fontSize: '11px', fontWeight: 'bold' }}>Elaborado por</p>
+              <p style={{ fontSize: '9px' }}>{new Date().toLocaleDateString('es-PE')}</p>
+            </div>
+            <div className="print-signature-box">
+              <div className="print-signature-line"></div>
+              <p style={{ fontSize: '11px', fontWeight: 'bold' }}>Revisado por</p>
+              <p style={{ fontSize: '9px' }}>Fecha: _____________</p>
+            </div>
+            <div className="print-signature-box">
+              <div className="print-signature-line"></div>
+              <p style={{ fontSize: '11px', fontWeight: 'bold' }}>Aprobado por</p>
+              <p style={{ fontSize: '9px' }}>Fecha: _____________</p>
+            </div>
+          </div>
+
+          <div className="print-notes">
+            <p style={{ fontSize: '11px', fontWeight: 'bold', marginBottom: '10px' }}>Observaciones:</p>
+            <p style={{ fontSize: '10px', color: '#666' }}>
+              _________________________________________________________________________________
+            </p>
+            <p style={{ fontSize: '10px', color: '#666', marginTop: '8px' }}>
+              _________________________________________________________________________________
+            </p>
+          </div>
+        </div>
       </div>{/* Cierre de print-area */}
     </div>
   );
