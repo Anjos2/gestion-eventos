@@ -13,6 +13,7 @@ import * as XLSX from 'xlsx';
 interface PersonalEnLote {
   id_personal: number;
   nombre_personal: string;
+  dni_personal: string | null;
   monto_asignado: number;
   cobro_realizado: boolean;
   contratos_por_tipo: Record<string, { cantidad: number; monto: number }>;
@@ -208,7 +209,7 @@ export default function LotePagoPage() {
           id_personal,
           monto_asignado,
           cobro_realizado,
-          Personal(nombre)
+          Personal(nombre, dni)
         `)
         .eq('id_lote_pago', id);
 
@@ -246,6 +247,7 @@ export default function LotePagoPage() {
         personalMap[lp.id_personal] = {
           id_personal: lp.id_personal,
           nombre_personal: personal?.nombre || 'Desconocido',
+          dni_personal: personal?.dni || null,
           monto_asignado: lp.monto_asignado,
           cobro_realizado: lp.cobro_realizado,
           contratos_por_tipo: {},
@@ -377,18 +379,20 @@ export default function LotePagoPage() {
     excelData.push([]); // Línea en blanco
 
     // Encabezados de tabla
-    const headers = ['Nombre', 'Total Contratos', 'Monto Total'];
+    const headers = ['Nombre', 'DNI', 'Total Contratos', 'Monto Total'];
     tiposContrato.forEach(tipo => {
       headers.push(`${tipo} (Cant)`);
       headers.push(`${tipo} (S/)`);
     });
     headers.push('Firma');
+    headers.push('Conforme');
     excelData.push(headers);
 
     // Datos del personal
     personalEnLote.forEach(personal => {
       const row: any[] = [
         personal.nombre_personal,
+        personal.dni_personal || '-',
         personal.total_contratos,
         personal.monto_asignado.toFixed(2)
       ];
@@ -400,12 +404,14 @@ export default function LotePagoPage() {
       });
 
       row.push('_________________'); // Línea para firma
+      row.push('[ ]'); // Checkbox para conforme
       excelData.push(row);
     });
 
     // Fila de totales
     const rowTotales: any[] = [
       'TOTAL',
+      '', // DNI vacío
       totales.total_contratos,
       totales.monto_total.toFixed(2)
     ];
@@ -417,6 +423,7 @@ export default function LotePagoPage() {
     });
 
     rowTotales.push(''); // Columna firma vacía
+    rowTotales.push(''); // Columna conforme vacía
     excelData.push(rowTotales);
 
     // Crear worksheet
@@ -425,6 +432,7 @@ export default function LotePagoPage() {
     // Configurar anchos de columna
     const colWidths: any[] = [
       { wch: 25 }, // Nombre
+      { wch: 12 }, // DNI
       { wch: 15 }, // Total Contratos
       { wch: 12 }  // Monto Total
     ];
@@ -434,6 +442,7 @@ export default function LotePagoPage() {
       colWidths.push({ wch: 12 }); // Monto
     });
     colWidths.push({ wch: 20 }); // Firma
+    colWidths.push({ wch: 10 }); // Conforme
 
     ws['!cols'] = colWidths;
 
@@ -665,6 +674,9 @@ export default function LotePagoPage() {
                   Nombre
                 </th>
                 <th className="px-4 py-3 text-center text-xs font-bold text-slate-400 uppercase">
+                  DNI
+                </th>
+                <th className="px-4 py-3 text-center text-xs font-bold text-slate-400 uppercase">
                   Total Contratos
                 </th>
                 <th className="px-4 py-3 text-right text-xs font-bold text-slate-400 uppercase">
@@ -683,6 +695,9 @@ export default function LotePagoPage() {
                 <th className="px-4 py-3 text-center text-xs font-bold text-slate-400 uppercase border-l border-slate-700">
                   Firma
                 </th>
+                <th className="px-4 py-3 text-center text-xs font-bold text-slate-400 uppercase">
+                  Conforme
+                </th>
                 {loteInfo.estado === 'EN_PREPARACION' && (
                   <th className="px-4 py-3 text-center text-xs font-bold text-slate-400 uppercase">
                     Cobró
@@ -700,6 +715,9 @@ export default function LotePagoPage() {
                 >
                   <td className="px-4 py-3 font-medium text-white">
                     {personal.nombre_personal}
+                  </td>
+                  <td className="px-4 py-3 text-center text-slate-300">
+                    {personal.dni_personal || '-'}
                   </td>
                   <td className="px-4 py-3 text-center text-slate-300">
                     {personal.total_contratos}
@@ -723,6 +741,9 @@ export default function LotePagoPage() {
                   <td className="px-4 py-3 border-l border-slate-700">
                     <div className="h-8 border-b border-slate-600" />
                   </td>
+                  <td className="px-4 py-3 text-center">
+                    <div className="h-8 w-8 mx-auto border-2 border-slate-600 rounded" />
+                  </td>
                   {loteInfo.estado === 'EN_PREPARACION' && (
                     <td className="px-4 py-3 text-center">
                       <input
@@ -740,6 +761,9 @@ export default function LotePagoPage() {
               <tr className="border-t-2 border-sky-500 print:border-black">
                 <td className="px-4 py-4 font-bold text-white print:text-black text-lg">
                   TOTAL
+                </td>
+                <td className="px-4 py-4 text-center font-bold text-white print:text-black">
+                  {/* Vacío - columna DNI */}
                 </td>
                 <td className="px-4 py-4 text-center font-bold text-white print:text-black text-lg">
                   {calcularTotales().total_contratos}
@@ -762,6 +786,9 @@ export default function LotePagoPage() {
                 })}
                 <td className="px-4 py-4 border-l border-slate-700 print:border-black">
                   {/* Vacío - columna firma */}
+                </td>
+                <td className="px-4 py-4">
+                  {/* Vacío - columna conforme */}
                 </td>
                 {loteInfo.estado === 'EN_PREPARACION' && (
                   <td className="px-4 py-4">

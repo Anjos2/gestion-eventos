@@ -19,13 +19,15 @@ interface Personal {
   es_activo: boolean;
   supabase_user_id: string | null;
   id_organizacion: number | null;
+  dni: string | null;
 }
 
 // --- COMPONENTES DE UI ---
-const AddPersonalForm = ({ onAddPersonal }: { onAddPersonal: (name: string, email: string, rol: string) => void }) => {
+const AddPersonalForm = ({ onAddPersonal }: { onAddPersonal: (name: string, email: string, rol: string, dni: string) => void }) => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [rol, setRol] = useState('OPERATIVO');
+  const [dni, setDni] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,19 +35,28 @@ const AddPersonalForm = ({ onAddPersonal }: { onAddPersonal: (name: string, emai
       toast.error('Por favor, completa el nombre y el email.');
       return;
     }
-    onAddPersonal(name, email, rol);
+    if (dni && (dni.length < 8 || dni.length > 12)) {
+      toast.error('El DNI debe tener entre 8 y 12 caracteres.');
+      return;
+    }
+    onAddPersonal(name, email, rol, dni);
     setName('');
     setEmail('');
     setRol('OPERATIVO');
+    setDni('');
   };
 
   return (
     <div className="bg-slate-800 p-4 md:p-6 rounded-xl shadow-lg mb-8 border border-slate-700">
       <h2 className="text-2xl font-bold text-white mb-4">Añadir nuevo personal</h2>
-      <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+      <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
         <div className="lg:col-span-1">
           <label htmlFor="name" className="block text-sm font-medium text-slate-400 mb-1">Nombre</label>
           <input id="name" type="text" value={name} onChange={(e) => setName(e.target.value)} className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white" placeholder="Ej: Juan Pérez" />
+        </div>
+        <div className="lg:col-span-1">
+          <label htmlFor="dni" className="block text-sm font-medium text-slate-400 mb-1">DNI <span className="text-slate-500">(opcional)</span></label>
+          <input id="dni" type="text" value={dni} onChange={(e) => setDni(e.target.value)} maxLength={12} className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white" placeholder="12345678" />
         </div>
         <div className="lg:col-span-1">
           <label htmlFor="email" className="block text-sm font-medium text-slate-400 mb-1">Email</label>
@@ -71,6 +82,7 @@ const PersonalTable = ({ personal, onToggleStatus }: { personal: Personal[], onT
         <thead className="bg-slate-900">
           <tr>
             <th className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase whitespace-nowrap">Nombre</th>
+            <th className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase whitespace-nowrap">DNI</th>
             <th className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase whitespace-nowrap">Email</th>
             <th className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase whitespace-nowrap">Rol</th>
             <th className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase whitespace-nowrap">Estado</th>
@@ -83,6 +95,7 @@ const PersonalTable = ({ personal, onToggleStatus }: { personal: Personal[], onT
             personal.map((p) => (
               <tr key={p.id} className="hover:bg-slate-700">
                 <td className="px-6 py-4 text-sm font-medium text-white whitespace-nowrap">{p.nombre}</td>
+                <td className="px-6 py-4 text-sm text-slate-300 whitespace-nowrap">{p.dni || '-'}</td>
                 <td className="px-6 py-4 text-sm text-slate-300 whitespace-nowrap">{p.email}</td>
                 <td className="px-6 py-4 text-sm text-slate-300 whitespace-nowrap">{p.rol}</td>
                 <td className="px-6 py-4 text-sm whitespace-nowrap">
@@ -106,7 +119,7 @@ const PersonalTable = ({ personal, onToggleStatus }: { personal: Personal[], onT
             ))
           ) : (
             <tr>
-              <td colSpan={6} className="text-center py-10 text-slate-400">No hay personal registrado todavía.</td>
+              <td colSpan={7} className="text-center py-10 text-slate-400">No hay personal registrado todavía.</td>
             </tr>
           )}
         </tbody>
@@ -163,7 +176,7 @@ function PersonalPageContent() {
     fetchPersonal();
   }, [currentPage, organization, supabase]);
 
-  const handleAddPersonal = async (name: string, email: string, rol: string) => {
+  const handleAddPersonal = async (name: string, email: string, rol: string, dni: string) => {
     if (!organization || !session) return;
     const toastId = toast.loading('Añadiendo personal...');
     try {
@@ -178,6 +191,7 @@ function PersonalPageContent() {
           nombre: name,
           email: email,
           rol: rol,
+          dni: dni || null,
           id_organizacion: organization.id
         }),
       });

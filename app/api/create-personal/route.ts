@@ -27,12 +27,20 @@ export async function POST(request: NextRequest) {
 
     // 2. Obtener datos del body
     const body = await request.json();
-    const { nombre, email, rol, id_organizacion } = body;
+    const { nombre, email, rol, id_organizacion, dni } = body;
 
     // 3. Validaciones básicas
     if (!nombre || !email || !rol || !id_organizacion) {
       return NextResponse.json(
         { error: 'Faltan datos requeridos: nombre, email, rol, id_organizacion' },
+        { status: 400 }
+      );
+    }
+
+    // Validar DNI si se proporciona
+    if (dni && (dni.length < 8 || dni.length > 12)) {
+      return NextResponse.json(
+        { error: 'El DNI debe tener entre 8 y 12 caracteres' },
         { status: 400 }
       );
     }
@@ -45,7 +53,32 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 5. Verificar que el email no esté ya registrado en Personal
+    // 5. Verificar que el DNI no esté duplicado en la organización
+    if (dni) {
+      const { data: existingDni, error: dniError } = await supabaseAdmin
+        .from('Personal')
+        .select('id, nombre')
+        .eq('dni', dni)
+        .eq('id_organizacion', id_organizacion)
+        .maybeSingle();
+
+      if (dniError) {
+        console.error('Error verificando DNI existente:', dniError);
+        return NextResponse.json(
+          { error: 'Error al verificar DNI existente' },
+          { status: 500 }
+        );
+      }
+
+      if (existingDni) {
+        return NextResponse.json(
+          { error: `El DNI ${dni} ya está registrado para ${existingDni.nombre} en esta organización` },
+          { status: 409 }
+        );
+      }
+    }
+
+    // 6. Verificar que el email no esté ya registrado en Personal
     const { data: existingPersonal, error: checkError } = await supabaseAdmin
       .from('Personal')
       .select('id, email, supabase_user_id')
@@ -102,10 +135,13 @@ export async function POST(request: NextRequest) {
 
     // 7. Si el registro de Personal ya existe, actualizarlo; si no, crearlo
     if (existingPersonal) {
-      // Actualizar registro existente con el nuevo supabase_user_id
+      // Actualizar registro existente con el nuevo supabase_user_id y DNI
       const { data: updatedPersonal, error: updateError } = await supabaseAdmin
         .from('Personal')
-        .update({ supabase_user_id: authUser.user.id })
+        .update({
+          supabase_user_id: authUser.user.id,
+          dni: dni || null
+        })
         .eq('id', existingPersonal.id)
         .select()
         .single();
@@ -129,6 +165,7 @@ export async function POST(request: NextRequest) {
           nombre: nombre,
           email: email,
           rol: rol,
+          dni: dni || null,
           id_organizacion: id_organizacion,
           supabase_user_id: authUser.user.id,
           es_activo: true
