@@ -42,48 +42,40 @@ export default function PorAprobarPage() {
 
       if (personalError || !personalData) throw new Error('No se pudo encontrar tu registro de personal.');
 
-      const { data: lotesData, error: lotesError } = await supabase
-        .from('Lotes_Pago')
-        .select(`
-          id,
-          monto_total,
-          fecha_pago,
-          estado,
-          Detalles_Lote_Pago!inner(
-            monto_pagado,
-            estado_asistencia_registrado,
-            descuento_aplicado_pct,
-            Evento_Servicios_Asignados!inner(
-              Servicios!inner(nombre),
-              Participaciones_Personal!inner(
-                Eventos_Contrato!inner(
-                  Contratos!inner(id)
-                )
-              )
-            )
-          )
-        `)
+      // Use flattened view instead of nested joins
+      const { data: detallesData, error: detallesError } = await supabase
+        .from('vista_lotes_pago_personal_detalle')
+        .select('*')
         .eq('id_personal', personalData.id)
         .in('estado', ['PAGADO', 'RECLAMADO'])
         .order('fecha_pago', { ascending: false });
 
-      if (lotesError) throw new Error(lotesError.message);
+      if (detallesError) throw new Error(detallesError.message);
 
-      const formattedLotes = lotesData.map(lote => ({
-        id: lote.id,
-        monto_total: lote.monto_total,
-        fecha_pago: new Date(lote.fecha_pago).toLocaleDateString(),
-        estado: lote.estado,
-        detalles: lote.Detalles_Lote_Pago.map((detalle: any) => ({
+      // Group details by lote
+      const lotesMap: { [key: number]: LotePago } = {};
+
+      detallesData?.forEach((detalle: any) => {
+        if (!lotesMap[detalle.id_lote]) {
+          lotesMap[detalle.id_lote] = {
+            id: detalle.id_lote,
+            monto_total: detalle.monto_total,
+            fecha_pago: new Date(detalle.fecha_pago).toLocaleDateString(),
+            estado: detalle.estado,
+            detalles: []
+          };
+        }
+
+        lotesMap[detalle.id_lote].detalles.push({
           monto_pagado: detalle.monto_pagado,
           estado_asistencia_registrado: detalle.estado_asistencia_registrado,
           descuento_aplicado_pct: detalle.descuento_aplicado_pct,
-          servicio_nombre: detalle.Evento_Servicios_Asignados.Servicios.nombre,
-          contrato_id: detalle.Evento_Servicios_Asignados.Participaciones_Personal.Eventos_Contrato.Contratos.id,
-        }))
-      }));
+          servicio_nombre: detalle.servicio_nombre,
+          contrato_id: detalle.contrato_id,
+        });
+      });
 
-      setLotes(formattedLotes);
+      setLotes(Object.values(lotesMap));
 
     } catch (err: any) {
       setError(err.message);
