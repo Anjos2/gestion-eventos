@@ -196,7 +196,7 @@ export default function ReporteMensualPagosPage() {
       console.log('1. Eventos-Contrato:', eventosContrato.length);
 
       const eventoContratoIds = eventosContrato.map(ec => ec.id);
-      const contratoIds = [...new Set(eventosContrato.map(ec => ec.id_contrato))];
+      const contratoIds = Array.from(new Set(eventosContrato.map(ec => ec.id_contrato)));
 
       // QUERY 2: Contratos (solo campos directos)
       const { data: contratos, error: contratosError } = await supabase
@@ -208,7 +208,7 @@ export default function ReporteMensualPagosPage() {
 
       console.log('2. Contratos:', contratos?.length || 0);
 
-      const tipoContratoIds = [...new Set(contratos?.map(c => c.id_tipo_contrato) || [])];
+      const tipoContratoIds = Array.from(new Set(contratos?.map(c => c.id_tipo_contrato) || []));
 
       // QUERY 3: Tipos de Contrato (solo campos directos)
       const { data: tiposContrato, error: tiposError } = await supabase
@@ -249,7 +249,7 @@ export default function ReporteMensualPagosPage() {
 
       console.log('5. Detalles Lote:', detallesLote?.length || 0);
 
-      const loteIds = [...new Set(detallesLote?.map(d => d.id_lote_pago) || [])];
+      const loteIds = Array.from(new Set(detallesLote?.map(d => d.id_lote_pago) || []));
 
       // QUERY 6: Lotes de Pago (solo campos directos)
       const { data: lotesPago, error: lotesError } = await supabase
@@ -271,7 +271,7 @@ export default function ReporteMensualPagosPage() {
 
       console.log('7. Participaciones:', participaciones?.length || 0);
 
-      const personalIds = [...new Set(participaciones?.map(p => p.id_personal_participante) || [])];
+      const personalIds = Array.from(new Set(participaciones?.map(p => p.id_personal_participante) || []));
 
       // QUERY 8: Personal (solo campos directos)
       const { data: personalData, error: personalError } = await supabase
