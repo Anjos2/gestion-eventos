@@ -169,14 +169,10 @@ export default function ContratoDetailPage() {
   const loadPersonal = async (inputValue: string): Promise<SelectOption[]> => {
     if (!contrato) return [];
 
-    const { data, error } = await supabase
-      .from('Personal')
-      .select('id, nombre')
-      .eq('id_organizacion', contrato.id_organizacion)
-      .eq('rol', 'OPERATIVO')
-      .eq('es_activo', true)
-      .ilike('nombre', `%${inputValue}%`)
-      .limit(10);
+    const { data, error } = await supabase.rpc('search_organization_personnel', {
+      p_search_text: inputValue,
+      p_limit: 10
+    });
 
     if (error) {
       console.error('Error buscando personal:', error);
