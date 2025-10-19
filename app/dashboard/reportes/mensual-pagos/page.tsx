@@ -316,10 +316,10 @@ export default function ReporteMensualPagosPage() {
               }
               return null;
             })
-            .filter((f: any) => f !== null);
+            .filter((f): f is Date => f !== null);
 
           if (fechasPago.length > 0) {
-            fechaPago = new Date(Math.max(...fechasPago.map((f: Date) => f.getTime())));
+            fechaPago = new Date(Math.max(...fechasPago.map(f => f.getTime())));
 
             if (serviciosPagados === data.servicios.length) {
               estadoPago = `Pagado (${fechaPago.toLocaleDateString('es-PE')})`;
