@@ -26,10 +26,18 @@ interface Servicio {
   monto_base: number;
 }
 
+interface CanalPago {
+  id: number;
+  nombre: string;
+  es_principal: boolean;
+}
+
 interface Participacion {
   id: number;
   estado_asistencia: string;
   hora_llegada: string | null;
+  incluir_en_calculos: boolean;
+  id_canal_pago_egreso: number | null;
   Personal: { nombre: string } | null;
   Evento_Servicios_Asignados: { id: number, Servicios: { nombre: string } | null }[];
 }
@@ -116,7 +124,10 @@ export default function ContratoDetailPage() {
   const [contrato, setContrato] = useState<ContratoDetails | null>(null);
   const [participaciones, setParticipaciones] = useState<Participacion[]>([]);
   const [servicios, setServicios] = useState<Servicio[]>([]);
+  const [canalesPago, setCanalesPago] = useState<CanalPago[]>([]);
   const [selectedPersonal, setSelectedPersonal] = useState<SelectOption | null>(null);
+  const [selectedCanalPago, setSelectedCanalPago] = useState<string>('');
+  const [incluirEnCalculos, setIncluirEnCalculos] = useState<boolean>(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentParticipacionId, setCurrentParticipacionId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
@@ -146,16 +157,25 @@ export default function ContratoDetailPage() {
           eventoId = nuevoEvento.id;
         }
 
-        const [participacionesRes, serviciosRes] = await Promise.all([
+        const [participacionesRes, serviciosRes, canalesPagoRes] = await Promise.all([
           supabase.from('Participaciones_Personal').select(`*, Personal(nombre), Evento_Servicios_Asignados(*, Servicios(nombre))`).eq('id_evento_contrato', eventoId),
-          supabase.from('Servicios').select('id, nombre, monto_base').eq('id_organizacion', contratoData.id_organizacion).eq('es_activo', true)
+          supabase.from('Servicios').select('id, nombre, monto_base').eq('id_organizacion', contratoData.id_organizacion).eq('es_activo', true),
+          supabase.from('Canales_Pago').select('id, nombre, es_principal').eq('id_organizacion', contratoData.id_organizacion).eq('es_activo', true).order('es_principal', { ascending: false })
         ]);
 
         if (participacionesRes.error) throw participacionesRes.error;
         if (serviciosRes.error) throw serviciosRes.error;
+        if (canalesPagoRes.error) throw canalesPagoRes.error;
 
         setParticipaciones(participacionesRes.data || []);
         setServicios(serviciosRes.data || []);
+        setCanalesPago(canalesPagoRes.data || []);
+
+        // Establecer canal principal por defecto
+        const canalPrincipal = canalesPagoRes.data?.find(c => c.es_principal);
+        if (canalPrincipal) {
+          setSelectedCanalPago(canalPrincipal.id.toString());
+        }
 
       } catch (err: any) {
         setError(err.message);
@@ -183,28 +203,40 @@ export default function ContratoDetailPage() {
   };
 
   // --- HANDLERS ---
-  const handleAsignarPersonal = async () => { 
+  const handleAsignarPersonal = async () => {
     if (!selectedPersonal || !contrato || !contrato.Eventos_Contrato[0]?.id) {
       alert('Selecciona un miembro del personal.');
       return;
     }
 
     try {
+      const insertData: any = {
+        id_organizacion: contrato.id_organizacion,
+        id_evento_contrato: contrato.Eventos_Contrato[0].id,
+        id_personal_participante: selectedPersonal.value,
+        estado_asistencia: 'ASIGNADO',
+        incluir_en_calculos: incluirEnCalculos,
+      };
+
+      // Solo agregar id_canal_pago_egreso si se seleccionó uno diferente al principal
+      if (selectedCanalPago) {
+        insertData.id_canal_pago_egreso = parseInt(selectedCanalPago);
+      }
+
       const { data: nuevaParticipacion, error } = await supabase
         .from('Participaciones_Personal')
-        .insert({
-          id_organizacion: contrato.id_organizacion,
-          id_evento_contrato: contrato.Eventos_Contrato[0].id,
-          id_personal_participante: selectedPersonal.value,
-          estado_asistencia: 'ASIGNADO',
-        })
+        .insert(insertData)
         .select('*, Personal(nombre), Evento_Servicios_Asignados(*, Servicios(nombre))')
         .single();
 
       if (error) throw error;
-      
+
       setParticipaciones([...participaciones, nuevaParticipacion]);
       setSelectedPersonal(null);
+      setIncluirEnCalculos(true);
+      // Resetear al canal principal
+      const canalPrincipal = canalesPago.find(c => c.es_principal);
+      setSelectedCanalPago(canalPrincipal ? canalPrincipal.id.toString() : '');
       alert('Personal asignado con éxito.');
     } catch (err: any) {
       alert(`Error al asignar personal: ${err.message}`);
@@ -383,21 +415,59 @@ export default function ContratoDetailPage() {
       <div className="space-y-8">
         <div className="bg-slate-800 p-6 rounded-xl border border-slate-700">
           <h2 className="text-2xl font-bold text-white mb-4">Asignación de personal y servicios</h2>
-          <div className="flex gap-4 mb-6">
-          <AsyncSelect
-            value={selectedPersonal}
-            onChange={(option) => setSelectedPersonal(option as SelectOption)}
-            loadOptions={loadPersonal}
-            placeholder="Buscar y seleccionar personal..."
-            cacheOptions
-            defaultOptions
-            styles={selectStyles}
-            className="flex-grow"
-            classNamePrefix="react-select"
-            isDisabled={contrato.estado === 'COMPLETADO' || contrato.estado_asignacion === 'COMPLETO'}
-          />
-          <button onClick={handleAsignarPersonal} className="px-6 py-2 bg-sky-600 text-white font-semibold rounded-lg hover:bg-sky-700 disabled:bg-sky-800 disabled:cursor-not-allowed" disabled={contrato.estado === 'COMPLETADO' || contrato.estado_asignacion === 'COMPLETO'}>Asignar</button>
-        </div>
+          <div className="space-y-4 mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-400 mb-1">Personal</label>
+                <AsyncSelect
+                  value={selectedPersonal}
+                  onChange={(option) => setSelectedPersonal(option as SelectOption)}
+                  loadOptions={loadPersonal}
+                  placeholder="Buscar y seleccionar personal..."
+                  cacheOptions
+                  defaultOptions
+                  styles={selectStyles}
+                  classNamePrefix="react-select"
+                  isDisabled={contrato.estado === 'COMPLETADO' || contrato.estado_asignacion === 'COMPLETO'}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-400 mb-1">Canal de Pago (Egreso)</label>
+                <select
+                  value={selectedCanalPago}
+                  onChange={(e) => setSelectedCanalPago(e.target.value)}
+                  className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white h-[42px]"
+                  disabled={contrato.estado === 'COMPLETADO' || contrato.estado_asignacion === 'COMPLETO'}
+                >
+                  <option value="">Seleccione</option>
+                  {canalesPago.map(cp => <option key={cp.id} value={cp.id}>{cp.nombre}{cp.es_principal ? ' ⭐' : ''}</option>)}
+                </select>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="incluir_en_calculos"
+                checked={incluirEnCalculos}
+                onChange={(e) => setIncluirEnCalculos(e.target.checked)}
+                className="w-4 h-4 text-sky-600 rounded focus:ring-2 focus:ring-sky-500"
+                disabled={contrato.estado === 'COMPLETADO' || contrato.estado_asignacion === 'COMPLETO'}
+              />
+              <label htmlFor="incluir_en_calculos" className="text-sm text-slate-300">
+                Incluir en cálculos de ingresos y egresos
+              </label>
+              <span className="text-xs text-slate-500 ml-2">(Desmarcar si se paga desde otra fuente)</span>
+            </div>
+            <div>
+              <button
+                onClick={handleAsignarPersonal}
+                className="w-full md:w-auto px-6 py-2 bg-sky-600 text-white font-semibold rounded-lg hover:bg-sky-700 disabled:bg-sky-800 disabled:cursor-not-allowed"
+                disabled={contrato.estado === 'COMPLETADO' || contrato.estado_asignacion === 'COMPLETO'}
+              >
+                Asignar Personal
+              </button>
+            </div>
+          </div>
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-slate-700">
               <thead className="bg-slate-900">

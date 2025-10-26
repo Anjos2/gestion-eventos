@@ -14,6 +14,7 @@ const ITEMS_PER_PAGE = 10;
 
 // --- INTERFACES ---
 interface TipoContrato { id: number; nombre: string; }
+interface CanalPago { id: number; nombre: string; es_principal: boolean; }
 interface Contrato {
   id: number;
   fecha_hora_evento: string;
@@ -63,39 +64,55 @@ const selectStyles = {
 
 
 // --- COMPONENTES DE UI ---
-const AddContratoForm = ({ 
-  loadContratadores, 
+const AddContratoForm = ({
+  loadContratadores,
   tiposContrato,
-  onAddContrato 
-}: { 
-  loadContratadores: (inputValue: string, callback: (options: SelectOption[]) => void) => void, 
+  canalesPago,
+  onAddContrato
+}: {
+  loadContratadores: (inputValue: string, callback: (options: SelectOption[]) => void) => void,
   tiposContrato: TipoContrato[],
-  onAddContrato: (data: any) => void 
+  canalesPago: CanalPago[],
+  onAddContrato: (data: any) => void
 }) => {
   const [idContratador, setIdContratador] = useState<SelectOption | null>(null);
   const [idTipoContrato, setIdTipoContrato] = useState('');
+  const [idCanalPago, setIdCanalPago] = useState('');
   const [fechaHoraEvento, setFechaHoraEvento] = useState('');
+
+  // Establecer el canal principal por defecto
+  useEffect(() => {
+    if (canalesPago.length > 0 && !idCanalPago) {
+      const canalPrincipal = canalesPago.find(c => c.es_principal);
+      if (canalPrincipal) {
+        setIdCanalPago(canalPrincipal.id.toString());
+      }
+    }
+  }, [canalesPago, idCanalPago]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!idContratador || !idTipoContrato || !fechaHoraEvento) {
+    if (!idContratador || !idTipoContrato || !fechaHoraEvento || !idCanalPago) {
       toast.error('Por favor, completa todos los campos.');
       return;
     }
-    onAddContrato({ 
+    onAddContrato({
       id_contratador: idContratador.value,
       id_tipo_contrato: parseInt(idTipoContrato),
+      id_canal_pago_ingreso: parseInt(idCanalPago),
       fecha_hora_evento: new Date(fechaHoraEvento).toISOString(),
     });
     setIdContratador(null);
     setIdTipoContrato('');
+    const canalPrincipal = canalesPago.find(c => c.es_principal);
+    setIdCanalPago(canalPrincipal ? canalPrincipal.id.toString() : '');
     setFechaHoraEvento('');
   };
 
   return (
     <div className="bg-slate-800 p-4 md:p-6 rounded-xl shadow-lg mb-8 border border-slate-700">
       <h2 className="text-2xl font-bold text-white mb-4">Registrar nuevo contrato</h2>
-      <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+      <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
         <div>
           <label htmlFor="id_contratador" className="block text-sm font-medium text-slate-400 mb-1">Contratador</label>
           <AsyncSelect
@@ -115,6 +132,13 @@ const AddContratoForm = ({
           <select id="id_tipo_contrato" value={idTipoContrato} onChange={(e) => setIdTipoContrato(e.target.value)} className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white h-[42px]">
             <option value="">Seleccione</option>
             {tiposContrato.map(tc => <option key={tc.id} value={tc.id}>{tc.nombre}</option>)}
+          </select>
+        </div>
+        <div>
+          <label htmlFor="id_canal_pago" className="block text-sm font-medium text-slate-400 mb-1">Canal de Ingreso</label>
+          <select id="id_canal_pago" value={idCanalPago} onChange={(e) => setIdCanalPago(e.target.value)} className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white h-[42px]">
+            <option value="">Seleccione</option>
+            {canalesPago.map(cp => <option key={cp.id} value={cp.id}>{cp.nombre}{cp.es_principal ? ' ⭐' : ''}</option>)}
           </select>
         </div>
         <div>
@@ -172,6 +196,7 @@ function ContratosPageContent() {
   const { organization, session } = useOrganization();
   const [contratos, setContratos] = useState<Contrato[]>([]);
   const [tiposContrato, setTiposContrato] = useState<TipoContrato[]>([]);
+  const [canalesPago, setCanalesPago] = useState<CanalPago[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [totalCount, setTotalCount] = useState(0);
@@ -229,6 +254,10 @@ function ContratosPageContent() {
         if (tiposContratoError) throw tiposContratoError;
         setTiposContrato(tiposContratoRes || []);
 
+        const { data: canalesPagoRes, error: canalesPagoError } = await supabase.from('Canales_Pago').select('id, nombre, es_principal').eq('id_organizacion', organization.id).eq('es_activo', true).order('es_principal', { ascending: false });
+        if (canalesPagoError) throw canalesPagoError;
+        setCanalesPago(canalesPagoRes || []);
+
         await fetchContratos(organization.id, currentPage);
 
       } catch (err: any) {
@@ -270,16 +299,17 @@ function ContratosPageContent() {
   return (
     <div>
       <h1 className="text-3xl font-bold text-white mb-6">Gestión de contratos</h1>
-      <AddContratoForm 
-        loadContratadores={loadContratadores} 
-        tiposContrato={tiposContrato} 
-        onAddContrato={handleAddContrato} 
+      <AddContratoForm
+        loadContratadores={loadContratadores}
+        tiposContrato={tiposContrato}
+        canalesPago={canalesPago}
+        onAddContrato={handleAddContrato}
       />
       <ContratosTable contratos={contratos} />
-      <Pagination 
-        currentPage={currentPage} 
-        totalCount={totalCount} 
-        itemsPerPage={ITEMS_PER_PAGE} 
+      <Pagination
+        currentPage={currentPage}
+        totalCount={totalCount}
+        itemsPerPage={ITEMS_PER_PAGE}
         path="/dashboard/contratos"
       />
     </div>

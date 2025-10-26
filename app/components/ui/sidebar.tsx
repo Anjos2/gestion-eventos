@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useOrganization } from '@/app/context/OrganizationContext';
-import { FiHome, FiUsers, FiBriefcase, FiFileText, FiTool, FiClipboard, FiCreditCard, FiBarChart2, FiDollarSign, FiShield, FiCalendar, FiX } from 'react-icons/fi';
+import { FiHome, FiUsers, FiBriefcase, FiFileText, FiTool, FiClipboard, FiCreditCard, FiBarChart2, FiDollarSign, FiShield, FiCalendar, FiX, FiSliders } from 'react-icons/fi';
 
 // Define los items de navegación para cada rol
 const navItemsAdmin = [
@@ -12,6 +12,7 @@ const navItemsAdmin = [
   { href: '/dashboard/contratadores', label: 'Contratadores', icon: <FiBriefcase /> },
   { href: '/dashboard/tipos-contrato', label: 'Tipos de contrato', icon: <FiFileText /> },
   { href: '/dashboard/servicios', label: 'Servicios', icon: <FiTool /> },
+  { href: '/dashboard/canales-pago', label: 'Canales de Pago', icon: <FiSliders /> },
   { href: '/dashboard/contratos', label: 'Contratos', icon: <FiClipboard /> },
   { href: '/dashboard/pagos', label: 'Pagos', icon: <FiCreditCard /> },
   { href: '/dashboard/reportes', label: 'Reportes', icon: <FiBarChart2 /> },
@@ -26,6 +27,7 @@ const navItemsOperativo = [
 
 const navItemsAdminApoyo = [
   { href: '/dashboard', label: 'Resumen', icon: <FiHome /> },
+  { href: '/dashboard/canales-pago', label: 'Canales de Pago', icon: <FiSliders /> },
   { href: '/dashboard/contratos', label: 'Contratos', icon: <FiClipboard /> },
   { href: '/dashboard/pagos', label: 'Pagos', icon: <FiCreditCard /> },
   { href: '/dashboard/reportes', label: 'Reportes', icon: <FiBarChart2 /> },
