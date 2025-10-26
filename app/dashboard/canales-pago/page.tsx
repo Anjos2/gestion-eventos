@@ -18,7 +18,7 @@ interface CanalPago {
 
 export default function CanalesPagoPage() {
   const supabase = createClientComponentClient()
-  const { userOrganization, userRole } = useOrganization()
+  const { organization, userRole } = useOrganization()
 
   const [canales, setCanales] = useState<CanalPago[]>([])
   const [loading, setLoading] = useState(true)
@@ -33,10 +33,10 @@ export default function CanalesPagoPage() {
   const isAdmin = userRole === 'ADMINISTRATIVO' || userRole === 'ADMINISTRATIVO_APOYO'
 
   useEffect(() => {
-    if (userOrganization) {
+    if (organization?.id) {
       fetchCanales()
     }
-  }, [userOrganization])
+  }, [organization?.id])
 
   const fetchCanales = async () => {
     try {
@@ -44,7 +44,7 @@ export default function CanalesPagoPage() {
       const { data, error } = await supabase
         .from('Canales_Pago')
         .select('*')
-        .eq('id_organizacion', userOrganization)
+        .eq('id_organizacion', organization?.id)
         .eq('es_activo', true)
         .order('es_principal', { ascending: false })
         .order('nombre', { ascending: true })
@@ -115,7 +115,7 @@ export default function CanalesPagoPage() {
         const { error } = await supabase
           .from('Canales_Pago')
           .insert({
-            id_organizacion: userOrganization,
+            id_organizacion: organization?.id,
             nombre: formData.nombre.trim(),
             descripcion: formData.descripcion.trim() || null,
             es_principal: formData.es_principal,

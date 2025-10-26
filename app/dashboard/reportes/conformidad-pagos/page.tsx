@@ -25,7 +25,7 @@ interface ParticipantePago {
 
 export default function ConformidadPagosPage() {
   const supabase = createClientComponentClient()
-  const { userOrganization, organization } = useOrganization()
+  const { organization } = useOrganization()
 
   const [canales, setCanales] = useState<CanalPago[]>([])
   const [dataPagos, setDataPagos] = useState<ParticipantePago[]>([])
@@ -37,17 +37,17 @@ export default function ConformidadPagosPage() {
   const [idCanalPago, setIdCanalPago] = useState<number | null>(null)
 
   useEffect(() => {
-    if (userOrganization) {
+    if (organization?.id) {
       fetchCanales()
     }
-  }, [userOrganization])
+  }, [organization?.id])
 
   const fetchCanales = async () => {
     try {
       const { data, error } = await supabase
         .from('Canales_Pago')
         .select('id, nombre')
-        .eq('id_organizacion', userOrganization)
+        .eq('id_organizacion', organization?.id)
         .eq('es_activo', true)
         .order('es_principal', { ascending: false })
 
@@ -60,7 +60,7 @@ export default function ConformidadPagosPage() {
   }
 
   const fetchConformidad = async () => {
-    if (!userOrganization) {
+    if (!organization?.id) {
       toast.error('No se pudo obtener la organización')
       return
     }
@@ -73,7 +73,7 @@ export default function ConformidadPagosPage() {
       let query = supabase
         .from('vista_conformidad_pagos_participante')
         .select('*')
-        .eq('id_organizacion', userOrganization)
+        .eq('id_organizacion', organization?.id)
         .gte('mes', mesInicio)
         .lte('mes', mesFin)
         .order('participante_nombre', { ascending: true })

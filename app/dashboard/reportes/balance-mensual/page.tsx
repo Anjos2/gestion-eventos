@@ -33,7 +33,7 @@ interface BalanceData {
 
 export default function BalanceMensualPage() {
   const supabase = createClientComponentClient()
-  const { userOrganization, organization } = useOrganization()
+  const { organization } = useOrganization()
 
   const [canales, setCanales] = useState<CanalPago[]>([])
   const [tiposContrato, setTiposContrato] = useState<TipoContrato[]>([])
@@ -48,16 +48,16 @@ export default function BalanceMensualPage() {
   const [idTipoContrato, setIdTipoContrato] = useState<number | null>(null)
 
   useEffect(() => {
-    if (userOrganization) {
+    if (organization?.id) {
       fetchCanalesYTipos()
     }
-  }, [userOrganization])
+  }, [organization?.id])
 
   const fetchCanalesYTipos = async () => {
     try {
       const [canalesRes, tiposRes] = await Promise.all([
-        supabase.from('Canales_Pago').select('id, nombre').eq('id_organizacion', userOrganization).eq('es_activo', true).order('es_principal', { ascending: false }),
-        supabase.from('Tipos_Contrato').select('id, nombre').eq('id_organizacion', userOrganization).eq('es_activo', true)
+        supabase.from('Canales_Pago').select('id, nombre').eq('id_organizacion', organization?.id).eq('es_activo', true).order('es_principal', { ascending: false }),
+        supabase.from('Tipos_Contrato').select('id, nombre').eq('id_organizacion', organization?.id).eq('es_activo', true)
       ])
 
       if (canalesRes.error) throw canalesRes.error
@@ -72,7 +72,7 @@ export default function BalanceMensualPage() {
   }
 
   const fetchBalance = async () => {
-    if (!userOrganization || !idCanalPago || !idTipoContrato) {
+    if (!organization?.id || !idCanalPago || !idTipoContrato) {
       toast.error('Por favor selecciona Canal de Pago y Tipo de Contrato')
       return
     }
@@ -85,7 +85,7 @@ export default function BalanceMensualPage() {
       const { data, error } = await supabase
         .from('vista_balance_mensual_canal_tipo')
         .select('*')
-        .eq('id_organizacion', userOrganization)
+        .eq('id_organizacion', organization?.id)
         .eq('id_canal_pago', idCanalPago)
         .eq('id_tipo_contrato', idTipoContrato)
         .gte('mes', mesInicio)
