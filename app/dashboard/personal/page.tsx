@@ -254,9 +254,9 @@ function PersonalPageContent() {
   const performToggle = async (id: number, currentStatus: boolean) => {
     const toastId = toast.loading('Actualizando estado...');
     try {
-      const { data, error } = await supabase.from('Personal').update({ es_activo: !currentStatus }).eq('id', id).select().single();
+      const { error } = await supabase.from('Personal').update({ es_activo: !currentStatus }).eq('id', id);
       if (error) throw error;
-      setPersonal(personal.map(p => p.id === id ? data : p));
+      setPersonal(personal.map(p => p.id === id ? { ...p, es_activo: !currentStatus } : p));
       toast.success(`Personal ${!currentStatus ? 'activado' : 'desactivado'} con éxito.`, { id: toastId });
     } catch (err: any) {
       toast.error(`Error al cambiar el estado: ${err.message}`, { id: toastId });

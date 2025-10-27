@@ -189,22 +189,22 @@ export default function ControlDiarioPage() {
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-bold text-gray-800 mb-6">Control Diario</h1>
+      <h1 className="text-2xl font-bold text-white mb-6">Control Diario</h1>
 
       {/* Filtros */}
-      <div className="bg-white rounded-lg shadow p-6 mb-6">
+      <div className="bg-slate-800 border border-slate-700 rounded-lg shadow p-6 mb-6">
         <div className="flex items-center gap-2 mb-4">
-          <FiFilter className="text-gray-600" />
-          <h2 className="text-lg font-semibold text-gray-800">Filtros</h2>
+          <FiFilter className="text-slate-400" />
+          <h2 className="text-lg font-semibold text-white">Filtros</h2>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Mes</label>
+            <label className="block text-sm font-medium text-slate-300 mb-1">Mes</label>
             <select
               value={mes}
               onChange={(e) => setMes(parseInt(e.target.value))}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2"
+              className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white"
             >
               {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
                 <option key={m} value={m}>{new Date(2000, m - 1).toLocaleString('es-ES', { month: 'long' })}</option>
@@ -213,11 +213,11 @@ export default function ControlDiarioPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Año</label>
+            <label className="block text-sm font-medium text-slate-300 mb-1">Año</label>
             <select
               value={anio}
               onChange={(e) => setAnio(parseInt(e.target.value))}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2"
+              className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white"
             >
               {Array.from({ length: 5 }, (_, i) => currentDate.getFullYear() - i).map(y => (
                 <option key={y} value={y}>{y}</option>
@@ -226,11 +226,11 @@ export default function ControlDiarioPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Canal de Pago *</label>
+            <label className="block text-sm font-medium text-slate-300 mb-1">Canal de Pago *</label>
             <select
               value={idCanalPago || ''}
               onChange={(e) => setIdCanalPago(e.target.value ? parseInt(e.target.value) : null)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2"
+              className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white"
             >
               <option value="">Seleccione</option>
               {canales.map(canal => (
@@ -240,11 +240,11 @@ export default function ControlDiarioPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de Contrato *</label>
+            <label className="block text-sm font-medium text-slate-300 mb-1">Tipo de Contrato *</label>
             <select
               value={idTipoContrato || ''}
               onChange={(e) => setIdTipoContrato(e.target.value ? parseInt(e.target.value) : null)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2"
+              className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white"
             >
               <option value="">Seleccione</option>
               {tiposContrato.map(tipo => (
@@ -258,7 +258,7 @@ export default function ControlDiarioPage() {
           <button
             onClick={fetchControlDiario}
             disabled={loading || !idCanalPago || !idTipoContrato}
-            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 disabled:bg-slate-600 disabled:cursor-not-allowed"
           >
             {loading ? 'Generando...' : 'Generar Reporte'}
           </button>
@@ -277,36 +277,36 @@ export default function ControlDiarioPage() {
 
       {/* Resultados - Vista Previa */}
       {Object.keys(participantes).length > 0 && (
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <div className="p-4 bg-gray-50 border-b">
-            <h3 className="text-lg font-semibold text-gray-800 capitalize">
+        <div className="bg-slate-800 border border-slate-700 rounded-lg shadow overflow-hidden">
+          <div className="p-4 bg-slate-900 border-b border-slate-700">
+            <h3 className="text-lg font-semibold text-white capitalize">
               Control de {mesNombre}
             </h3>
-            <p className="text-sm text-gray-600 mt-1">
+            <p className="text-sm text-slate-400 mt-1">
               {canales.find(c => c.id === idCanalPago)?.nombre} - {tiposContrato.find(t => t.id === idTipoContrato)?.nombre}
             </p>
           </div>
 
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-100">
+            <table className="min-w-full divide-y divide-slate-700">
+              <thead className="bg-slate-900">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase sticky left-0 bg-gray-100">Participante</th>
-                  <th className="px-4 py-3 text-center text-xs font-bold text-gray-700 uppercase">Cantidad</th>
-                  <th className="px-4 py-3 text-right text-xs font-bold text-gray-700 uppercase">Total</th>
-                  <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Eventos</th>
+                  <th className="px-4 py-3 text-left text-xs font-bold text-slate-400 uppercase sticky left-0 bg-slate-900">Participante</th>
+                  <th className="px-4 py-3 text-center text-xs font-bold text-slate-400 uppercase">Cantidad</th>
+                  <th className="px-4 py-3 text-right text-xs font-bold text-slate-400 uppercase">Total</th>
+                  <th className="px-4 py-3 text-left text-xs font-bold text-slate-400 uppercase">Eventos</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-slate-800 divide-y divide-slate-700">
                 {Object.entries(participantes).map(([nombre, data]: [string, any], index) => (
-                  <tr key={index} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 text-sm font-medium text-gray-900 sticky left-0 bg-white">{nombre}</td>
-                    <td className="px-4 py-3 text-sm text-center text-gray-600">{data.cantidadEventos}</td>
-                    <td className="px-4 py-3 text-sm text-right font-semibold text-gray-900">S/. {data.totalMonto.toFixed(2)}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">
+                  <tr key={index} className="hover:bg-slate-700">
+                    <td className="px-4 py-3 text-sm font-medium text-white sticky left-0 bg-slate-800">{nombre}</td>
+                    <td className="px-4 py-3 text-sm text-center text-slate-300">{data.cantidadEventos}</td>
+                    <td className="px-4 py-3 text-sm text-right font-semibold text-white">S/. {data.totalMonto.toFixed(2)}</td>
+                    <td className="px-4 py-3 text-sm text-slate-300">
                       <div className="flex flex-wrap gap-2">
                         {data.eventos.map((evento: EventoDiario, i: number) => (
-                          <span key={i} className="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">
+                          <span key={i} className="inline-block bg-blue-900 text-blue-200 px-2 py-1 rounded text-xs">
                             {new Date(evento.fecha_evento).getDate()}/{mes} - S/. {evento.monto_pactado}
                           </span>
                         ))}
@@ -314,12 +314,12 @@ export default function ControlDiarioPage() {
                     </td>
                   </tr>
                 ))}
-                <tr className="bg-gray-100 font-bold">
-                  <td className="px-4 py-3 text-sm text-gray-900">TOTALES</td>
-                  <td className="px-4 py-3 text-sm text-center text-gray-900">
+                <tr className="bg-slate-900 font-bold">
+                  <td className="px-4 py-3 text-sm text-white">TOTALES</td>
+                  <td className="px-4 py-3 text-sm text-center text-white">
                     {Object.values(participantes).reduce((sum: number, p: any) => sum + p.cantidadEventos, 0)}
                   </td>
-                  <td className="px-4 py-3 text-sm text-right text-gray-900">
+                  <td className="px-4 py-3 text-sm text-right text-white">
                     S/. {Object.values(participantes).reduce((sum: number, p: any) => sum + p.totalMonto, 0).toFixed(2)}
                   </td>
                   <td></td>
@@ -328,8 +328,8 @@ export default function ControlDiarioPage() {
             </table>
           </div>
 
-          <div className="p-4 bg-blue-50 border-t border-blue-200">
-            <p className="text-sm text-blue-700">
+          <div className="p-4 bg-blue-900/30 border-t border-blue-700">
+            <p className="text-sm text-blue-300">
               💡 <strong>Tip:</strong> Exporta a Excel para ver el calendario completo día por día
             </p>
           </div>
@@ -337,8 +337,8 @@ export default function ControlDiarioPage() {
       )}
 
       {dataEventos.length === 0 && !loading && (
-        <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">
-          <p className="text-gray-600">Selecciona los filtros y genera el reporte</p>
+        <div className="bg-slate-900 border border-slate-700 rounded-lg p-8 text-center">
+          <p className="text-slate-400">Selecciona los filtros y genera el reporte</p>
         </div>
       )}
     </div>

@@ -180,8 +180,8 @@ export default function CanalesPagoPage() {
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Canales de Pago</h1>
-          <p className="text-gray-600 text-sm mt-1">
+          <h1 className="text-2xl font-bold text-white">Canales de Pago</h1>
+          <p className="text-slate-400 text-sm mt-1">
             Gestiona los canales para organizar ingresos y egresos
           </p>
         </div>
@@ -198,14 +198,14 @@ export default function CanalesPagoPage() {
       {loading ? (
         <div className="text-center py-12">
           <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          <p className="text-gray-600 mt-2">Cargando canales...</p>
+          <p className="text-slate-400 mt-2">Cargando canales...</p>
         </div>
       ) : canales.length === 0 ? (
-        <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">
-          <p className="text-gray-600">No hay canales de pago registrados</p>
+        <div className="bg-slate-900 border border-slate-700 rounded-lg p-8 text-center">
+          <p className="text-slate-400">No hay canales de pago registrados</p>
           <button
             onClick={() => handleOpenModal()}
-            className="mt-4 text-blue-600 hover:underline"
+            className="mt-4 text-blue-400 hover:underline"
           >
             Crear primer canal
           </button>
@@ -215,30 +215,30 @@ export default function CanalesPagoPage() {
           {canales.map((canal) => (
             <div
               key={canal.id}
-              className={`bg-white border rounded-lg p-5 hover:shadow-md transition ${
-                canal.es_principal ? 'border-blue-400 bg-blue-50' : 'border-gray-200'
+              className={`bg-slate-800 border rounded-lg p-5 hover:shadow-md transition ${
+                canal.es_principal ? 'border-blue-400 bg-blue-900/30' : 'border-slate-700'
               }`}
             >
               <div className="flex justify-between items-start mb-3">
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
-                    <h3 className="font-semibold text-gray-800 text-lg">
+                    <h3 className="font-semibold text-white text-lg">
                       {canal.nombre}
                     </h3>
                     {canal.es_principal && (
-                      <FiStar className="text-blue-600" size={18} title="Canal Principal" />
+                      <FiStar className="text-blue-400" size={18} title="Canal Principal" />
                     )}
                   </div>
                   {canal.descripcion && (
-                    <p className="text-gray-600 text-sm mt-1">{canal.descripcion}</p>
+                    <p className="text-slate-400 text-sm mt-1">{canal.descripcion}</p>
                   )}
                 </div>
               </div>
 
-              <div className="flex gap-2 mt-4 pt-4 border-t border-gray-200">
+              <div className="flex gap-2 mt-4 pt-4 border-t border-slate-700">
                 <button
                   onClick={() => handleOpenModal(canal)}
-                  className="flex-1 bg-gray-100 text-gray-700 px-3 py-2 rounded hover:bg-gray-200 transition flex items-center justify-center gap-2 text-sm"
+                  className="flex-1 bg-slate-700 text-white px-3 py-2 rounded hover:bg-slate-600 transition flex items-center justify-center gap-2 text-sm"
                 >
                   <FiEdit2 size={14} />
                   Editar
@@ -246,7 +246,7 @@ export default function CanalesPagoPage() {
                 {!canal.es_principal && (
                   <button
                     onClick={() => handleDelete(canal)}
-                    className="flex-1 bg-red-50 text-red-600 px-3 py-2 rounded hover:bg-red-100 transition flex items-center justify-center gap-2 text-sm"
+                    className="flex-1 bg-red-900/50 text-red-300 px-3 py-2 rounded hover:bg-red-900 transition flex items-center justify-center gap-2 text-sm"
                   >
                     <FiTrash2 size={14} />
                     Eliminar
@@ -261,35 +261,35 @@ export default function CanalesPagoPage() {
       {/* Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-md w-full p-6">
-            <h2 className="text-xl font-bold text-gray-800 mb-4">
+          <div className="bg-slate-800 rounded-lg max-w-md w-full p-6 border border-slate-700">
+            <h2 className="text-xl font-bold text-white mb-4">
               {editingCanal ? 'Editar Canal' : 'Nuevo Canal'}
             </h2>
 
             <form onSubmit={handleSubmit}>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Nombre del Canal <span className="text-red-500">*</span>
+                  <label className="block text-sm font-medium text-slate-300 mb-1">
+                    Nombre del Canal <span className="text-red-400">*</span>
                   </label>
                   <input
                     type="text"
                     value={formData.nombre}
                     onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="Ej: Canal Principal, Donaciones, Patrocinios"
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-slate-300 mb-1">
                     Descripción
                   </label>
                   <textarea
                     value={formData.descripcion}
                     onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="Descripción opcional del canal"
                     rows={3}
                   />
@@ -303,13 +303,13 @@ export default function CanalesPagoPage() {
                     onChange={(e) => setFormData({ ...formData, es_principal: e.target.checked })}
                     className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
                   />
-                  <label htmlFor="es_principal" className="text-sm text-gray-700 flex items-center gap-1">
+                  <label htmlFor="es_principal" className="text-sm text-slate-300 flex items-center gap-1">
                     <FiStar size={14} />
                     Marcar como canal principal
                   </label>
                 </div>
 
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-slate-500">
                   * Solo puede haber un canal principal. Si marcas este canal como principal,
                   el anterior dejará de serlo automáticamente.
                 </p>
@@ -319,7 +319,7 @@ export default function CanalesPagoPage() {
                 <button
                   type="button"
                   onClick={handleCloseModal}
-                  className="flex-1 bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition"
+                  className="flex-1 bg-slate-700 text-white px-4 py-2 rounded-lg hover:bg-slate-600 transition"
                 >
                   Cancelar
                 </button>

@@ -154,22 +154,22 @@ export default function BalanceMensualPage() {
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-bold text-gray-800 mb-6">Balance Mensual</h1>
+      <h1 className="text-2xl font-bold text-white mb-6">Balance Mensual</h1>
 
       {/* Filtros */}
-      <div className="bg-white rounded-lg shadow p-6 mb-6">
+      <div className="bg-slate-800 border border-slate-700 rounded-lg shadow p-6 mb-6">
         <div className="flex items-center gap-2 mb-4">
-          <FiFilter className="text-gray-600" />
-          <h2 className="text-lg font-semibold text-gray-800">Filtros</h2>
+          <FiFilter className="text-slate-400" />
+          <h2 className="text-lg font-semibold text-white">Filtros</h2>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Mes</label>
+            <label className="block text-sm font-medium text-slate-300 mb-1">Mes</label>
             <select
               value={mes}
               onChange={(e) => setMes(parseInt(e.target.value))}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2"
+              className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white"
             >
               {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
                 <option key={m} value={m}>{new Date(2000, m - 1).toLocaleString('es-ES', { month: 'long' })}</option>
@@ -178,11 +178,11 @@ export default function BalanceMensualPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Año</label>
+            <label className="block text-sm font-medium text-slate-300 mb-1">Año</label>
             <select
               value={anio}
               onChange={(e) => setAnio(parseInt(e.target.value))}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2"
+              className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white"
             >
               {Array.from({ length: 5 }, (_, i) => currentDate.getFullYear() - i).map(y => (
                 <option key={y} value={y}>{y}</option>
@@ -191,11 +191,11 @@ export default function BalanceMensualPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Canal de Pago *</label>
+            <label className="block text-sm font-medium text-slate-300 mb-1">Canal de Pago *</label>
             <select
               value={idCanalPago || ''}
               onChange={(e) => setIdCanalPago(e.target.value ? parseInt(e.target.value) : null)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2"
+              className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white"
             >
               <option value="">Seleccione</option>
               {canales.map(canal => (
@@ -205,11 +205,11 @@ export default function BalanceMensualPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de Contrato *</label>
+            <label className="block text-sm font-medium text-slate-300 mb-1">Tipo de Contrato *</label>
             <select
               value={idTipoContrato || ''}
               onChange={(e) => setIdTipoContrato(e.target.value ? parseInt(e.target.value) : null)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2"
+              className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white"
             >
               <option value="">Seleccione</option>
               {tiposContrato.map(tipo => (
@@ -223,7 +223,7 @@ export default function BalanceMensualPage() {
           <button
             onClick={fetchBalance}
             disabled={loading || !idCanalPago || !idTipoContrato}
-            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 disabled:bg-slate-600 disabled:cursor-not-allowed"
           >
             {loading ? 'Generando...' : 'Generar Reporte'}
           </button>
@@ -242,68 +242,68 @@ export default function BalanceMensualPage() {
 
       {/* Resultados */}
       {balanceData.length > 0 && (
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4 capitalize">
+        <div className="bg-slate-800 border border-slate-700 rounded-lg shadow p-6">
+          <h3 className="text-lg font-semibold text-white mb-4 capitalize">
             Balance de {mesNombre} - {canales.find(c => c.id === idCanalPago)?.nombre} - {tiposContrato.find(t => t.id === idTipoContrato)?.nombre}
           </h3>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-              <p className="text-sm text-green-700 font-medium">INGRESOS</p>
-              <p className="text-2xl font-bold text-green-800">
+            <div className="bg-green-900/30 border border-green-700 rounded-lg p-4">
+              <p className="text-sm text-green-300 font-medium">INGRESOS</p>
+              <p className="text-2xl font-bold text-green-200">
                 S/. {balanceData.reduce((sum, item) => sum + item.total_ingresos, 0).toFixed(2)}
               </p>
-              <p className="text-xs text-green-600 mt-1">
+              <p className="text-xs text-green-400 mt-1">
                 {balanceData.reduce((sum, item) => sum + item.cantidad_contratos, 0)} contratos
               </p>
             </div>
 
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-              <p className="text-sm text-red-700 font-medium">EGRESOS</p>
-              <p className="text-2xl font-bold text-red-800">
+            <div className="bg-red-900/30 border border-red-700 rounded-lg p-4">
+              <p className="text-sm text-red-300 font-medium">EGRESOS</p>
+              <p className="text-2xl font-bold text-red-200">
                 S/. {balanceData.reduce((sum, item) => sum + item.total_egresos, 0).toFixed(2)}
               </p>
-              <p className="text-xs text-red-600 mt-1">
+              <p className="text-xs text-red-400 mt-1">
                 {balanceData.reduce((sum, item) => sum + item.cantidad_participaciones, 0)} participaciones
               </p>
             </div>
 
             <div className={`border rounded-lg p-4 ${
               (balanceData.reduce((sum, item) => sum + item.neto, 0)) >= 0
-                ? 'bg-blue-50 border-blue-200'
-                : 'bg-yellow-50 border-yellow-200'
+                ? 'bg-blue-900/30 border-blue-700'
+                : 'bg-yellow-900/30 border-yellow-700'
             }`}>
               <p className={`text-sm font-medium ${
                 (balanceData.reduce((sum, item) => sum + item.neto, 0)) >= 0
-                  ? 'text-blue-700'
-                  : 'text-yellow-700'
+                  ? 'text-blue-300'
+                  : 'text-yellow-300'
               }`}>NETO</p>
               <p className={`text-2xl font-bold ${
                 (balanceData.reduce((sum, item) => sum + item.neto, 0)) >= 0
-                  ? 'text-blue-800'
-                  : 'text-yellow-800'
+                  ? 'text-blue-200'
+                  : 'text-yellow-200'
               }`}>
                 S/. {balanceData.reduce((sum, item) => sum + item.neto, 0).toFixed(2)}
               </p>
               <p className={`text-xs mt-1 ${
                 (balanceData.reduce((sum, item) => sum + item.neto, 0)) >= 0
-                  ? 'text-blue-600'
-                  : 'text-yellow-600'
+                  ? 'text-blue-400'
+                  : 'text-yellow-400'
               }`}>
                 {(balanceData.reduce((sum, item) => sum + item.neto, 0)) >= 0 ? 'Utilidad' : 'Pérdida'}
               </p>
             </div>
           </div>
 
-          <p className="text-xs text-gray-500 mt-4">
+          <p className="text-xs text-slate-500 mt-4">
             * Este reporte incluye solo las participaciones marcadas como "Incluir en cálculos"
           </p>
         </div>
       )}
 
       {balanceData.length === 0 && !loading && (
-        <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">
-          <p className="text-gray-600">Selecciona los filtros y genera el reporte</p>
+        <div className="bg-slate-900 border border-slate-700 rounded-lg p-8 text-center">
+          <p className="text-slate-400">Selecciona los filtros y genera el reporte</p>
         </div>
       )}
     </div>

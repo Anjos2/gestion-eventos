@@ -6,6 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { FiPlus, FiArrowLeft, FiCheckCircle } from 'react-icons/fi';
 import Link from 'next/link';
 import AsyncSelect from 'react-select/async';
+import Select from 'react-select';
 
 // --- INTERFACES ---
 interface ContratoDetails {
@@ -39,6 +40,7 @@ interface Participacion {
   incluir_en_calculos: boolean;
   id_canal_pago_egreso: number | null;
   Personal: { nombre: string } | null;
+  Canales_Pago: { nombre: string, es_principal: boolean } | null;
   Evento_Servicios_Asignados: { id: number, Servicios: { nombre: string } | null }[];
 }
 
@@ -125,7 +127,7 @@ export default function ContratoDetailPage() {
   const [participaciones, setParticipaciones] = useState<Participacion[]>([]);
   const [servicios, setServicios] = useState<Servicio[]>([]);
   const [canalesPago, setCanalesPago] = useState<CanalPago[]>([]);
-  const [selectedPersonal, setSelectedPersonal] = useState<SelectOption | null>(null);
+  const [selectedPersonal, setSelectedPersonal] = useState<SelectOption[]>([]);
   const [selectedCanalPago, setSelectedCanalPago] = useState<string>('');
   const [incluirEnCalculos, setIncluirEnCalculos] = useState<boolean>(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -158,7 +160,7 @@ export default function ContratoDetailPage() {
         }
 
         const [participacionesRes, serviciosRes, canalesPagoRes] = await Promise.all([
-          supabase.from('Participaciones_Personal').select(`*, Personal(nombre), Evento_Servicios_Asignados(*, Servicios(nombre))`).eq('id_evento_contrato', eventoId),
+          supabase.from('Participaciones_Personal').select(`*, Personal(nombre), Canales_Pago(nombre, es_principal), Evento_Servicios_Asignados(*, Servicios(nombre))`).eq('id_evento_contrato', eventoId),
           supabase.from('Servicios').select('id, nombre, monto_base').eq('id_organizacion', contratoData.id_organizacion).eq('es_activo', true),
           supabase.from('Canales_Pago').select('id, nombre, es_principal').eq('id_organizacion', contratoData.id_organizacion).eq('es_activo', true).order('es_principal', { ascending: false })
         ]);
@@ -204,40 +206,43 @@ export default function ContratoDetailPage() {
 
   // --- HANDLERS ---
   const handleAsignarPersonal = async () => {
-    if (!selectedPersonal || !contrato || !contrato.Eventos_Contrato[0]?.id) {
-      alert('Selecciona un miembro del personal.');
+    if (!selectedPersonal.length || !contrato || !contrato.Eventos_Contrato[0]?.id) {
+      alert('Selecciona al menos un miembro del personal.');
       return;
     }
 
     try {
-      const insertData: any = {
-        id_organizacion: contrato.id_organizacion,
-        id_evento_contrato: contrato.Eventos_Contrato[0].id,
-        id_personal_participante: selectedPersonal.value,
-        estado_asistencia: 'ASIGNADO',
-        incluir_en_calculos: incluirEnCalculos,
-      };
+      const insertDataArray = selectedPersonal.map(person => {
+        const insertData: any = {
+          id_organizacion: contrato.id_organizacion,
+          id_evento_contrato: contrato.Eventos_Contrato[0].id,
+          id_personal_participante: person.value,
+          estado_asistencia: 'ASIGNADO',
+          incluir_en_calculos: incluirEnCalculos,
+        };
 
-      // Solo agregar id_canal_pago_egreso si se seleccionó uno diferente al principal
-      if (selectedCanalPago) {
-        insertData.id_canal_pago_egreso = parseInt(selectedCanalPago);
-      }
+        // Solo agregar id_canal_pago_egreso si se seleccionó uno diferente al principal
+        if (selectedCanalPago) {
+          insertData.id_canal_pago_egreso = parseInt(selectedCanalPago);
+        }
 
-      const { data: nuevaParticipacion, error } = await supabase
+        return insertData;
+      });
+
+      const { data: nuevasParticipaciones, error } = await supabase
         .from('Participaciones_Personal')
-        .insert(insertData)
-        .select('*, Personal(nombre), Evento_Servicios_Asignados(*, Servicios(nombre))')
-        .single();
+        .insert(insertDataArray)
+        .select('*, Personal(nombre), Canales_Pago(nombre, es_principal), Evento_Servicios_Asignados(*, Servicios(nombre))');
 
       if (error) throw error;
 
-      setParticipaciones([...participaciones, nuevaParticipacion]);
-      setSelectedPersonal(null);
+      setParticipaciones([...participaciones, ...(nuevasParticipaciones || [])]);
+      setSelectedPersonal([]);
       setIncluirEnCalculos(true);
       // Resetear al canal principal
       const canalPrincipal = canalesPago.find(c => c.es_principal);
       setSelectedCanalPago(canalPrincipal ? canalPrincipal.id.toString() : '');
-      alert('Personal asignado con éxito.');
+      alert(`${selectedPersonal.length} miembro(s) del personal asignado(s) con éxito.`);
     } catch (err: any) {
       alert(`Error al asignar personal: ${err.message}`);
     }
@@ -418,16 +423,17 @@ export default function ContratoDetailPage() {
           <div className="space-y-4 mb-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-400 mb-1">Personal</label>
+                <label className="block text-sm font-medium text-slate-400 mb-1">Personal (puedes seleccionar múltiples)</label>
                 <AsyncSelect
                   value={selectedPersonal}
-                  onChange={(option) => setSelectedPersonal(option as SelectOption)}
+                  onChange={(options) => setSelectedPersonal(options as SelectOption[])}
                   loadOptions={loadPersonal}
                   placeholder="Buscar y seleccionar personal..."
                   cacheOptions
                   defaultOptions
                   styles={selectStyles}
                   classNamePrefix="react-select"
+                  isMulti={true}
                   isDisabled={contrato.estado === 'COMPLETADO' || contrato.estado_asignacion === 'COMPLETO'}
                 />
               </div>
@@ -464,7 +470,7 @@ export default function ContratoDetailPage() {
                 className="w-full md:w-auto px-6 py-2 bg-sky-600 text-white font-semibold rounded-lg hover:bg-sky-700 disabled:bg-sky-800 disabled:cursor-not-allowed"
                 disabled={contrato.estado === 'COMPLETADO' || contrato.estado_asignacion === 'COMPLETO'}
               >
-                Asignar Personal
+                {selectedPersonal.length > 0 ? `Asignar ${selectedPersonal.length} Personal` : 'Asignar Personal'}
               </button>
             </div>
           </div>
@@ -473,6 +479,7 @@ export default function ContratoDetailPage() {
               <thead className="bg-slate-900">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase">Participante</th>
+                  <th className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase">Canal de Pago</th>
                   <th className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase">Servicios asignados</th>
                   <th className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase">Estado de asistencia</th>
                   <th className="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase">Hora de llegada</th>
@@ -483,6 +490,11 @@ export default function ContratoDetailPage() {
                 {participaciones.map((p: Participacion) => (
                   <tr key={p.id}>
                     <td className="px-6 py-4 align-top text-sm text-white">{p.Personal?.nombre}</td>
+                    <td className="px-6 py-4 align-top text-sm text-slate-300">
+                      <span className={`px-2 py-1 text-xs rounded-full ${p.Canales_Pago?.es_principal ? 'bg-blue-900 text-blue-200' : 'bg-slate-700 text-slate-300'}`}>
+                        {p.Canales_Pago?.nombre || 'Canal Principal'}
+                      </span>
+                    </td>
                     <td className="px-6 py-4 align-top">
                       <div className="flex flex-wrap gap-2">
                         {p.Evento_Servicios_Asignados.map(esa => (
@@ -516,7 +528,7 @@ export default function ContratoDetailPage() {
                     </td>
                   </tr>
                 ))}
-                {participaciones.length === 0 && <tr><td colSpan={5} className="text-center py-8 text-slate-500">No hay personal asignado.</td></tr>}
+                {participaciones.length === 0 && <tr><td colSpan={6} className="text-center py-8 text-slate-500">No hay personal asignado.</td></tr>}
               </tbody>
             </table>
           </div>

@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { FiChevronRight, FiBarChart2, FiFileText, FiCalendar } from 'react-icons/fi';
+import { FiChevronRight, FiBarChart2, FiFileText, FiCalendar, FiAlertCircle } from 'react-icons/fi';
 
 const reportes = [
   {
@@ -9,6 +9,12 @@ const reportes = [
     description: 'Calcula ingresos, egresos y neto por mes, canal de pago y tipo de contrato. Ideal para rendición de cuentas ante la junta directiva.',
     href: '/dashboard/reportes/balance-mensual',
     icon: <FiBarChart2 className="text-3xl text-sky-400" />,
+  },
+  {
+    title: 'Pagos Pendientes',
+    description: 'Muestra todos los pagos pendientes a personal por eventos completados. Útil para cuadrar cuentas antes de realizar los pagos.',
+    href: '/dashboard/reportes/pagos-pendientes',
+    icon: <FiAlertCircle className="text-3xl text-yellow-400" />,
   },
   {
     title: 'Conformidad de Pagos',
